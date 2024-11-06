@@ -177,9 +177,9 @@ body {
 }
 
 .defect-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
 /* 添加缩放控制器样 */
@@ -1161,5 +1161,19 @@ body.resizing {
     color: var(--primary-color);
     background: var(--secondary-color);
     border-radius: var(--border-radius);
+}
+
+/* 修改缺陷网格的默认样式 */
+.defect-grid {
+    display: flex;  /* 默认使用列表布局 */
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* 当切换到卡片视图时应用网格布局 */
+.defect-grid.view-normal {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.75rem;
 }
   

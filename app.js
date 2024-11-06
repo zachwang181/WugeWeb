@@ -408,14 +408,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderDefects();
     renderTags();
     
-    // 恢复视图偏好
-    const preferredView = localStorage.getItem('preferred-view');
-    if (preferredView) {
-        debug(`恢复视图偏好: ${preferredView}`, 'info');
-        const button = document.querySelector(`[data-size="${preferredView}"]`);
-        if (button) {
-            button.click();
-        }
+    // 恢复视图偏好，如果没有保存过偏好，则默认使用列表视图
+    const preferredView = localStorage.getItem('preferred-view') || 'compact';
+    debug(`设置视图模式: ${preferredView}`, 'info');
+    const button = document.querySelector(`[data-size="${preferredView}"]`);
+    if (button) {
+        button.click();
     }
     
     debug('系统初始化完成', 'success');
@@ -1329,7 +1327,7 @@ function isTagInUse(tagType, tagValue) {
     return state.defects.some(defect => defect.tags[tagType] === tagValue);
 }
 
-// 添加标签编辑处理��数
+// 添加标签编辑处理数
 function handleTagEdit(event) {
     event.stopPropagation();
     const tag = event.currentTarget;
