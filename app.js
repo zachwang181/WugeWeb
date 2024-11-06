@@ -538,7 +538,7 @@ function handleTagInput(e) {
     }
 }
 
-// 添加视图切换处理数
+// 修改视图切换处理函数
 function handleViewChange(e) {
     const button = e.currentTarget;
     const size = button.dataset.size;
@@ -551,7 +551,7 @@ function handleViewChange(e) {
     button.classList.add('active');
     
     // 更新网格视图
-    grid.classList.remove('view-compact', 'view-normal', 'view-comfortable');
+    grid.classList.remove('view-compact', 'view-normal');
     grid.classList.add(`view-${size}`);
     
     // 保存用户偏好
@@ -597,19 +597,21 @@ function initializeResizeHandle() {
     });
 }
 
-// 渲染缺陷列表
+// 修改渲染缺陷列表函数
 function renderDefects(defects = state.defects) {
     const grid = document.getElementById('defectGrid');
+    const currentView = grid.classList.contains('view-compact') ? 'compact' : 'normal';
+    
     grid.innerHTML = defects.map(defect => `
         <div class="defect-card" data-id="${defect.id}">
             <div class="card-header">
                 <span class="defect-id">${defect.id}</span>
                 <h3>${defect.title}</h3>
             </div>
-            ${defect.image?.length ? `
+            ${currentView === 'normal' ? `
                 <div class="card-image" onclick="viewDefect('${defect.id}')">
-                    <img src="${defect.image[0]}" alt="${defect.title}">
-                    ${defect.image.length > 1 ? `
+                    <img src="${defect.image?.[0] || ''}" alt="${defect.title}">
+                    ${defect.image?.length > 1 ? `
                         <div class="image-count">+${defect.image.length - 1}</div>
                     ` : ''}
                 </div>
@@ -623,13 +625,13 @@ function renderDefects(defects = state.defects) {
             </div>
             <div class="card-actions">
                 <button class="btn-text" onclick="viewDefect('${defect.id}')">
-                    <i class="fas fa-eye"></i> 查看
+                    <i class="fas fa-eye"></i> ${currentView === 'normal' ? '查看' : ''}
                 </button>
                 <button class="btn-text" onclick="editDefect('${defect.id}')">
-                    <i class="fas fa-edit"></i> 编辑
+                    <i class="fas fa-edit"></i> ${currentView === 'normal' ? '编辑' : ''}
                 </button>
                 <button class="btn-text danger" onclick="deleteDefect('${defect.id}')">
-                    <i class="fas fa-trash"></i> 删除
+                    <i class="fas fa-trash"></i> ${currentView === 'normal' ? '删除' : ''}
                 </button>
             </div>
         </div>
@@ -1043,7 +1045,7 @@ function handleMultipleImageUpload(input, previewId) {
         }
 
         if (file.size > 5 * 1024 * 1024) {
-            showToast('图片大���不能超过5MB', 'error');
+            showToast('图片大小不能超过5MB', 'error');
             return;
         }
 
