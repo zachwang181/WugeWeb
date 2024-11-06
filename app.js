@@ -321,7 +321,7 @@ function clearAllData() {
             location: ['主卧', '客厅', '厨房', '卫生间', '阳台'],
             position: ['墙面', '地面', '天花', '门窗', '踢脚线']
         };
-        debug('所有数据已清除', 'success');
+        debug('所有数据已��除', 'success');
         return true;
     } catch (error) {
         debug(`清除数据失败: ${error.message}`, 'error');
@@ -1443,15 +1443,44 @@ function handleDragEnd(event) {
     });
 }
 
-// 添加导出功能
-function exportSystem() {
+// 修改导出功能，添加图片处理
+async function exportSystem() {
     try {
+        debug('开始准备导出数据...', 'info');
+        
+        // 深拷贝数据以避免修改原始数据
         const exportData = {
-            defects: state.defects,
+            defects: JSON.parse(JSON.stringify(state.defects)),
             tags: state.tags,
-            version: '1.0', // 添加版本号以便后续升级
+            version: '1.0',
             exportDate: new Date().toISOString()
         };
+        
+        // 处理所有缺陷记录中的图片
+        for (let defect of exportData.defects) {
+            // 处理主图片
+            if (defect.image && defect.image.length) {
+                defect.image = await Promise.all(defect.image.map(async (imgUrl) => {
+                    return await fetchAndConvertToBase64(imgUrl);
+                }));
+            }
+            
+            // 处理示范图片
+            if (defect.exampleImages && defect.exampleImages.length) {
+                defect.exampleImages = await Promise.all(defect.exampleImages.map(async (imgUrl) => {
+                    return await fetchAndConvertToBase64(imgUrl);
+                }));
+            }
+            
+            // 处理规范图片
+            if (defect.standardImages && defect.standardImages.length) {
+                defect.standardImages = await Promise.all(defect.standardImages.map(async (imgUrl) => {
+                    return await fetchAndConvertToBase64(imgUrl);
+                }));
+            }
+        }
+        
+        debug('图片数据处理完成', 'success');
         
         // 转换为JSON字符串
         const jsonStr = JSON.stringify(exportData);
@@ -1481,7 +1510,32 @@ function exportSystem() {
     }
 }
 
-// 添加导入功能
+// 添加图片转换辅助函数
+async function fetchAndConvertToBase64(url) {
+    try {
+        // 如果已经是Base64格式，直接返回
+        if (url.startsWith('data:image')) {
+            return url;
+        }
+        
+        // 获取图片数据
+        const response = await fetch(url);
+        const blob = await response.blob();
+        
+        // 转换为Base64
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch (error) {
+        debug(`图片转换失败: ${url}`, 'error');
+        return null;
+    }
+}
+
+// 修改导入功能，添加图片处理
 function importSystem(file) {
     const reader = new FileReader();
     
@@ -1499,6 +1553,8 @@ function importSystem(file) {
                 // 更新状态
                 state.defects = importData.defects;
                 state.tags = importData.tags;
+                
+                debug('开始处理导入的图片数据...', 'info');
                 
                 // 保存到本地存储
                 saveToLocalStorage();
