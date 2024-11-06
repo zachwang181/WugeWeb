@@ -217,7 +217,7 @@ function loadFromLocalStorage() {
             state.defects = JSON.parse(savedDefects);
             debug(`从本地存储加载缺陷记录成功: ${state.defects.length} 条`, 'success');
         } else {
-            debug('本地��中未找到缺陷记录', 'warning');
+            debug('本地存储中未找到缺陷记录', 'warning');
         }
         
         if (savedTags) {
@@ -315,13 +315,13 @@ function clearAllData() {
             location: [],
             position: []
         };
-        // 重置为默认标签，移除"工艺"后缀
+        // 重置为默认标签
         state.tags = {
             craft: ['砌筑', '抹灰', '防水', '木作', '油漆'],
             location: ['主卧', '客厅', '厨房', '卫生间', '阳台'],
             position: ['墙面', '地面', '天花', '门窗', '踢脚线']
         };
-        debug('所有数据清除', 'success');
+        debug('所有数据已清除', 'success');
         return true;
     } catch (error) {
         debug(`清除数据失败: ${error.message}`, 'error');
@@ -609,7 +609,7 @@ function addTagEventListeners() {
                     tag.classList.add('selected');
                 }
                 
-                debug(`更��${type}过滤器: ${state.filters[type].join(', ')}`, 'info');
+                debug(`更新${type}过滤器: ${state.filters[type].join(', ')}`, 'info');
                 renderDefects();
             }
         });
@@ -679,7 +679,7 @@ function handleTagInput(event) {
             // 检查是否存在同名标签
             if (state.tags[tagType].includes(tagName)) {
                 debug(`标签"${tagName}"已存在`, 'warning');
-                input.value = ''; // 清空输入
+                input.value = ''; // 清输入
                 return;
             }
             
@@ -1442,3 +1442,116 @@ function handleDragEnd(event) {
         tag.classList.remove('dragging', 'drag-before', 'drag-after');
     });
 }
+
+// 添加导出功能
+function exportSystem() {
+    try {
+        const exportData = {
+            defects: state.defects,
+            tags: state.tags,
+            version: '1.0', // 添加版本号以便后续升级
+            exportDate: new Date().toISOString()
+        };
+        
+        // 转换为JSON字符串
+        const jsonStr = JSON.stringify(exportData);
+        
+        // 创建Blob对象
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        
+        // 创建下载链接
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `house-inspection-system-${new Date().toISOString().split('T')[0]}.json`;
+        
+        // 触发下载
+        document.body.appendChild(a);
+        a.click();
+        
+        // 清理
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        debug('系统数据导出成功', 'success');
+        showToast('导出成功', 'success');
+    } catch (error) {
+        debug(`导出失败: ${error.message}`, 'error');
+        showToast('导出失败', 'error');
+    }
+}
+
+// 添加导入功能
+function importSystem(file) {
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        try {
+            const importData = JSON.parse(e.target.result);
+            
+            // 验证导入数据的格式
+            if (!importData.defects || !importData.tags) {
+                throw new Error('导入文件格式不正确');
+            }
+            
+            // 确认导入
+            if (confirm('导入将覆盖当前的所有数据，是否继续？')) {
+                // 更新状态
+                state.defects = importData.defects;
+                state.tags = importData.tags;
+                
+                // 保存到本地存储
+                saveToLocalStorage();
+                
+                // 重新渲染界面
+                renderDefects();
+                renderTags();
+                
+                debug('系统数据导入成功', 'success');
+                showToast('导入成功', 'success');
+            }
+        } catch (error) {
+            debug(`导入失败: ${error.message}`, 'error');
+            showToast('导入失败：文件格式不正确', 'error');
+        }
+    };
+    
+    reader.onerror = function() {
+        debug('文件读取失败', 'error');
+        showToast('文件读取失败', 'error');
+    };
+    
+    reader.readAsText(file);
+}
+
+// 修改导航栏，添加导入导出按钮
+function addImportExportButtons() {
+    const navRight = document.querySelector('.nav-right');
+    
+    // 在新增按钮之前插入导入导出按钮
+    const importExportButtons = document.createElement('div');
+    importExportButtons.className = 'import-export-buttons';
+    importExportButtons.innerHTML = `
+        <input type="file" id="importFile" accept=".json" style="display: none" 
+               onchange="importSystem(this.files[0])">
+        <button class="btn-text" onclick="document.getElementById('importFile').click()">
+            <i class="fas fa-file-import"></i>
+        </button>
+        <button class="btn-text" onclick="exportSystem()">
+            <i class="fas fa-file-export"></i>
+        </button>
+    `;
+    
+    const addDefectBtn = document.getElementById('addDefectBtn');
+    navRight.insertBefore(importExportButtons, addDefectBtn);
+}
+
+// 在初始化时添加导入导出按钮
+document.addEventListener('DOMContentLoaded', () => {
+    // ... 其他初始化代码 ...
+    
+    // 添加导入导出按钮
+    addImportExportButtons();
+    
+    // ... 其他初始化代码 ...
+});

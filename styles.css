@@ -1143,4 +1143,23 @@ body.resizing {
 /* .tag:active {
     transform: scale(1.05);
 } */
+
+/* 添加导入导出按钮样式 */
+.import-export-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-right: 0.5rem;
+}
+
+.import-export-buttons .btn-text {
+    padding: 0.25rem 0.5rem;
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+
+.import-export-buttons .btn-text:hover {
+    color: var(--primary-color);
+    background: var(--secondary-color);
+    border-radius: var(--border-radius);
+}
   
