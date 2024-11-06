@@ -92,7 +92,9 @@ function showDefectModal(mode, defect = null) {
                                 <div id="defectImagePreview" class="image-preview">
                                     ${defect?.image?.map(img => `
                                         <div class="image-preview-container">
-                                            <img src="${img}" alt="缺陷照片">
+                                            <img src="${img}" alt="缺陷照片" 
+                                                onclick="showFullImage('${img}')"
+                                                title="点击查看大图">
                                             <button type="button" class="btn-text danger" onclick="removePreviewImage(this)">
                                                 <i class="fas fa-times"></i>
                                             </button>
@@ -122,7 +124,9 @@ function showDefectModal(mode, defect = null) {
                                 <div id="examplePreview" class="image-preview">
                                     ${defect?.exampleImages?.map(img => `
                                         <div class="image-preview-container">
-                                            <img src="${img}" alt="示范照片">
+                                            <img src="${img}" alt="示范照片" 
+                                                onclick="showFullImage('${img}')"
+                                                title="点击查看大图">
                                             <button type="button" class="btn-text danger" onclick="removePreviewImage(this)">
                                                 <i class="fas fa-times"></i>
                                             </button>
@@ -152,7 +156,9 @@ function showDefectModal(mode, defect = null) {
                                 <div id="standardPreview" class="image-preview">
                                     ${defect?.standardImages?.map(img => `
                                         <div class="image-preview-container">
-                                            <img src="${img}" alt="规范图示">
+                                            <img src="${img}" alt="规范图示" 
+                                                onclick="showFullImage('${img}')"
+                                                title="点击查看大图">
                                             <button type="button" class="btn-text danger" onclick="removePreviewImage(this)">
                                                 <i class="fas fa-times"></i>
                                             </button>
@@ -279,7 +285,7 @@ function migrateImageData() {
             defect.exampleImages = [];
         }
         
-        // 处理规范图片
+        // 理规范图片
         if (!Array.isArray(defect.standardImages)) {
             defect.standardImages = [];
         }
@@ -301,7 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 数据迁移
     migrateImageData();
     
-    // 保存初始数据
+    // 保存初数据
     saveToLocalStorage();
     
     // 初始化事件监听器
@@ -337,7 +343,7 @@ function loadMockData() {
                 risk: '高风险'
             },
             date: '2024-03-20',
-            description: '墙面开裂，裂缝宽度约0.3mm，位于户角部位置，呈45度角延伸。',
+            description: '墙面裂，裂缝宽约0.3mm，位于户角部位置，呈45度角延伸。',
             example: '正确的墙面施工应确保砂浆配比合理，砌筑时应注意砂浆饱满度，避免空鼓。',
             exampleImages: [], // 初始化为空数组
             standard: '根据《建筑工程施工质量验收统一标准》GB50300-2013第5.3.2条规定...',
@@ -702,7 +708,7 @@ function viewDefect(id) {
                             ${defect.image?.length ? 
                                 defect.image.map(img => `
                                     <img src="${img}" alt="缺陷照片" 
-                                        onclick="showFullImage(this.src)" 
+                                        onclick="showFullImage('${img}')" 
                                         title="点击查看大图">
                                 `).join('') : 
                                 '<div class="no-image-placeholder"><i class="fas fa-image"></i><p>暂无图片</p></div>'
@@ -720,7 +726,9 @@ function viewDefect(id) {
                         <div class="detail-images">
                             ${defect.exampleImages?.length ? 
                                 defect.exampleImages.map(img => `
-                                    <img src="${img}" alt="示范照片" onclick="showFullImage(this.src)">
+                                    <img src="${img}" alt="示范照片" 
+                                        onclick="showFullImage('${img}')" 
+                                        title="点击查看大图">
                                 `).join('') : 
                                 '<div class="no-image-placeholder"><i class="fas fa-image"></i><p>暂无图片</p></div>'
                             }
@@ -737,7 +745,9 @@ function viewDefect(id) {
                         <div class="detail-images">
                             ${defect.standardImages?.length ? 
                                 defect.standardImages.map(img => `
-                                    <img src="${img}" alt="规范照片" onclick="showFullImage(this.src)">
+                                    <img src="${img}" alt="规范图示" 
+                                        onclick="showFullImage('${img}')" 
+                                        title="点击查看大图">
                                 `).join('') : 
                                 '<div class="no-image-placeholder"><i class="fas fa-image"></i><p>暂无图片</p></div>'
                             }
@@ -860,15 +870,165 @@ function generateNewId() {
 
 // 显示全屏图片
 function showFullImage(src) {
+    debug(`正在打开图片预览: ${src}`, 'info');
+    
+    // 先移除可能存在的旧预览模态框
+    const existingModal = document.querySelector('.fullscreen-image');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
     const modal = document.createElement('div');
     modal.className = 'modal fullscreen-image';
+    modal.style.display = 'block'; // 确保模态框显示
     modal.innerHTML = `
-        <div class="modal-content" style="background: transparent; box-shadow: none; max-width: 90vw;">
-            <img src="${src}" style="max-width: 100%; max-height: 90vh; object-fit: contain;">
-            <button class="close-btn" onclick="this.parentElement.parentElement.remove()">&times;</button>
+        <div class="modal-content image-preview-modal">
+            <div class="preview-header">
+                <button class="close-btn" onclick="closeImagePreview(this)">&times;</button>
+            </div>
+            <div class="preview-body">
+                <button class="nav-btn prev" onclick="navigateImage(-1)" style="display: none;">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <img src="${src}" alt="预览图片">
+                <button class="nav-btn next" onclick="navigateImage(1)" style="display: none;">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div class="preview-footer">
+                <div class="image-counter"></div>
+                <div class="preview-controls">
+                    <button class="btn-text" onclick="rotateImage(-90)">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button class="btn-text" onclick="rotateImage(90)">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                    <button class="btn-text" onclick="zoomImage(0.1)">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button class="btn-text" onclick="zoomImage(-0.1)">
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <button class="btn-text" onclick="resetImage()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
         </div>
     `;
+    
     document.body.appendChild(modal);
+    
+    // 初始化图片预览状态
+    window.imagePreviewState = {
+        rotation: 0,
+        scale: 1,
+        images: [],
+        currentIndex: 0
+    };
+    
+    // 获取同组的所有图片
+    const container = document.querySelector(`img[src="${src}"]`)?.closest('.detail-images, .image-preview');
+    if (container) {
+        const images = Array.from(container.querySelectorAll('img')).map(img => img.src);
+        debug(`找到同组图片: ${images.length}张`, 'info');
+        window.imagePreviewState.images = images;
+        window.imagePreviewState.currentIndex = images.indexOf(src);
+        
+        // 如果有多张图片，显示导航按钮
+        if (images.length > 1) {
+            debug('启用图片导航按钮', 'info');
+            modal.querySelector('.nav-btn.prev').style.display = 'flex';
+            modal.querySelector('.nav-btn.next').style.display = 'flex';
+            updateImageCounter();
+        }
+    } else {
+        debug('未找到同组图片容器', 'warning');
+    }
+    
+    // 添加键盘事件监听
+    document.addEventListener('keydown', handleImagePreviewKeydown);
+    
+    debug('图片预览模态框已创建', 'success');
+}
+
+// 关闭图片预览
+function closeImagePreview(btn) {
+    const modal = btn.closest('.modal');
+    modal.remove();
+    document.removeEventListener('keydown', handleImagePreviewKeydown);
+    window.imagePreviewState = null;
+}
+
+// 处理键盘事件
+function handleImagePreviewKeydown(e) {
+    switch(e.key) {
+        case 'Escape':
+            document.querySelector('.fullscreen-image .close-btn').click();
+            break;
+        case 'ArrowLeft':
+            navigateImage(-1);
+            break;
+        case 'ArrowRight':
+            navigateImage(1);
+            break;
+    }
+}
+
+// 图片导航
+function navigateImage(direction) {
+    const state = window.imagePreviewState;
+    if (!state || !state.images.length) return;
+    
+    state.currentIndex = (state.currentIndex + direction + state.images.length) % state.images.length;
+    const modal = document.querySelector('.fullscreen-image');
+    const img = modal.querySelector('img');
+    img.src = state.images[state.currentIndex];
+    
+    // 重置图片状态
+    resetImage();
+    updateImageCounter();
+}
+
+// 更新图片计数器
+function updateImageCounter() {
+    const state = window.imagePreviewState;
+    if (!state || !state.images.length) return;
+    
+    const counter = document.querySelector('.image-counter');
+    counter.textContent = `${state.currentIndex + 1} / ${state.images.length}`;
+}
+
+// 旋转图片
+function rotateImage(degree) {
+    const state = window.imagePreviewState;
+    if (!state) return;
+    
+    state.rotation = (state.rotation + degree) % 360;
+    const img = document.querySelector('.fullscreen-image img');
+    img.style.transform = `rotate(${state.rotation}deg) scale(${state.scale})`;
+}
+
+// 缩放图片
+function zoomImage(delta) {
+    const state = window.imagePreviewState;
+    if (!state) return;
+    
+    state.scale = Math.max(0.1, Math.min(3, state.scale + delta));
+    const img = document.querySelector('.fullscreen-image img');
+    img.style.transform = `rotate(${state.rotation}deg) scale(${state.scale})`;
+}
+
+// 重置图片状态
+function resetImage() {
+    const state = window.imagePreviewState;
+    if (!state) return;
+    
+    state.rotation = 0;
+    state.scale = 1;
+    const img = document.querySelector('.fullscreen-image img');
+    img.style.transform = '';
 }
 
 // 处理多图片上传
@@ -892,14 +1052,19 @@ function handleMultipleImageUpload(input, previewId) {
             const container = document.createElement('div');
             container.className = 'image-preview-container';
             container.innerHTML = `
-                <img src="${e.target.result}" alt="预览图片">
+                <img src="${e.target.result}" 
+                     alt="预览图片" 
+                     onclick="showFullImage('${e.target.result}')"
+                     title="点击查看大图">
                 <button class="btn-text danger" onclick="removePreviewImage(this)" title="删除图片">
                     <i class="fas fa-times"></i>
                 </button>
             `;
             preview.appendChild(container);
+            debug(`图片上传成功: ${file.name}`, 'success');
         };
         reader.onerror = function() {
+            debug(`图片读取失败: ${file.name}`, 'error');
             showToast('图片读取失败，请重试', 'error');
         };
         reader.readAsDataURL(file);
