@@ -321,7 +321,7 @@ function clearAllData() {
             location: ['主卧', '客厅', '厨房', '卫生间', '阳台'],
             position: ['墙面', '地面', '天花', '门窗', '踢脚线']
         };
-        debug('所有数据已��除', 'success');
+        debug('所有数据已除', 'success');
         return true;
     } catch (error) {
         debug(`清除数据失败: ${error.message}`, 'error');
@@ -329,24 +329,66 @@ function clearAllData() {
     }
 }
 
-// DOM 加载完成后初始化
-document.addEventListener('DOMContentLoaded', () => {
+// 添加首次加载检查函数
+async function loadInitialData() {
+    try {
+        debug('检查是否为首次加载...', 'info');
+        
+        // 检查是否首次加载
+        const isFirstLoad = !localStorage.getItem('hasInitialized');
+        
+        if (isFirstLoad) {
+            debug('检测到首次加载，准备加载初始配置...', 'info');
+            
+            // 加载 initial.json
+            const response = await fetch('initial.json');
+            if (!response.ok) {
+                throw new Error('无法加载初始配置文件');
+            }
+            
+            const initialData = await response.json();
+            
+            // 更新状态
+            state.defects = initialData.defects || [];
+            if (initialData.tags) {
+                state.tags = initialData.tags;
+            }
+            
+            // 保存到本地存储
+            saveToLocalStorage();
+            
+            // 标记已初始化
+            localStorage.setItem('hasInitialized', 'true');
+            
+            debug('初始配置加载完成', 'success');
+            return true;
+        } else {
+            debug('检测到已初始化，使用本地存储数据', 'info');
+            return false;
+        }
+    } catch (error) {
+        debug(`加载初始配置失败: ${error.message}`, 'error');
+        return false;
+    }
+}
+
+// 修改 DOM 加载完成后的初始化函数
+document.addEventListener('DOMContentLoaded', async () => {
     debug('系统初始化开始...', 'info');
     
-    // 除可能存在的示例卡片
+    // 清除可能存在的示例卡片
     const defectGrid = document.getElementById('defectGrid');
     if (defectGrid) {
         defectGrid.innerHTML = '';
         debug('清除示例卡片', 'info');
     }
     
-    // 加载数据
-    const loadResult = loadFromLocalStorage();
+    // 检查是否首次加载
+    const isFirstLoad = await loadInitialData();
     
-    // 如果确实没有任何数据，可以选择是否加载示例数据
-    if (!loadResult || state.defects.length === 0) {
-        debug('本地存储为空，但保持为空状态', 'info');
-        // 不再自动加载示例数据
+    if (!isFirstLoad) {
+        // 如果不是首次加载，从本地存储加载数据
+        loadFromLocalStorage();
     }
 
     // 数据迁移
@@ -376,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    debug('系统初始完成', 'success');
+    debug('系统初始化完成', 'success');
 });
 
 // 加载模拟数据
@@ -1287,7 +1329,7 @@ function isTagInUse(tagType, tagValue) {
     return state.defects.some(defect => defect.tags[tagType] === tagValue);
 }
 
-// 添加标签编辑处理函数
+// 添加标签编辑处理��数
 function handleTagEdit(event) {
     event.stopPropagation();
     const tag = event.currentTarget;
