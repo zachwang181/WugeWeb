@@ -249,11 +249,6 @@ function initializeEventListeners() {
         showDefectModal('add');
     });
 
-    // 标签点击事件
-    document.querySelectorAll('.tag').forEach(tag => {
-        tag.addEventListener('click', handleTagClick);
-    });
-
     // 新增标签按钮事件
     document.querySelectorAll('.add-tag-btn').forEach(btn => {
         btn.addEventListener('click', handleAddTag);
@@ -266,6 +261,16 @@ function initializeEventListeners() {
 
     // 添加宽度调整功能
     initializeResizeHandle();
+
+    // 确保过滤器状态正确初始化
+    state.filters = {
+        craft: [],
+        location: [],
+        position: []
+    };
+    
+    // 渲染标签
+    renderTags();
 }
 
 // 数据迁移函数
@@ -375,7 +380,7 @@ function handleTagClick(e) {
     }
     
     debug(`更新${tagType}过滤器: ${state.filters[tagType].join(', ')}`, 'info');
-    filterDefectsByTags();
+    renderDefects(); // 直接调用 renderDefects，它会内部调用 filterDefectsByTags
 }
 
 // 处理添加标签
@@ -410,14 +415,16 @@ function filterDefectsByTags() {
     
     // 对每种类型的标签进行过滤
     ['craft', 'location', 'position'].forEach(type => {
-        if (state.filters[type].length > 0) {
-            filteredDefects = filteredDefects.filter(defect => 
-                state.filters[type].includes(defect.tags[type])
-            );
+        if (state.filters[type]?.length > 0) {
+            const beforeCount = filteredDefects.length;
+            filteredDefects = filteredDefects.filter(defect => {
+                return state.filters[type].includes(defect.tags[type]);
+            });
+            debug(`${type}过滤: ${beforeCount} -> ${filteredDefects.length}`, 'info');
         }
     });
     
-    renderDefects(filteredDefects);
+    return filteredDefects;
 }
 
 // 渲染标签
@@ -425,52 +432,101 @@ function renderTags() {
     // 渲染工艺标签
     document.getElementById('craftTags').innerHTML = `
         ${state.tags.craft.map(tag => `
-            <span class="tag craft-tag ${state.filters.craft.includes(tag) ? 'selected' : ''}" 
-                  onclick="handleTagClick(event)">
+            <span class="tag craft-tag ${state.filters.craft?.includes(tag) ? 'selected' : ''}" 
+                  data-type="craft" 
+                  data-tag="${tag}">
                 ${tag} 
-                <i class="fas fa-times" onclick="event.stopPropagation(); handleTagDelete('craft', '${tag}')"></i>
+                <i class="fas fa-times" data-action="delete"></i>
             </span>
         `).join('')}
-        <div class="tag-input-container">
-            <input type="text" class="tag-input craft-input" placeholder="输入新标签" style="display: none;">
-            <button class="add-tag-btn" onclick="showTagInput(this, 'craft')"><i class="fas fa-plus"></i> 新增</button>
-        </div>
+        <button class="add-tag-btn" data-type="craft">
+            <i class="fas fa-plus"></i> 新增
+        </button>
     `;
 
     // 渲染位置标签
     document.getElementById('locationTags').innerHTML = `
         ${state.tags.location.map(tag => `
-            <span class="tag location-tag ${state.filters.location.includes(tag) ? 'selected' : ''}"
-                  onclick="handleTagClick(event)">
+            <span class="tag location-tag ${state.filters.location?.includes(tag) ? 'selected' : ''}"
+                  data-type="location"
+                  data-tag="${tag}">
                 ${tag} 
-                <i class="fas fa-times" onclick="event.stopPropagation(); handleTagDelete('location', '${tag}')"></i>
+                <i class="fas fa-times" data-action="delete"></i>
             </span>
         `).join('')}
-        <div class="tag-input-container">
-            <input type="text" class="tag-input location-input" placeholder="输入新标签" style="display: none;">
-            <button class="add-tag-btn" onclick="showTagInput(this, 'location')"><i class="fas fa-plus"></i> 新增</button>
-        </div>
+        <button class="add-tag-btn" data-type="location">
+            <i class="fas fa-plus"></i> 新增
+        </button>
     `;
 
     // 渲染部位标签
     document.getElementById('positionTags').innerHTML = `
         ${state.tags.position.map(tag => `
-            <span class="tag position-tag ${state.filters.position.includes(tag) ? 'selected' : ''}"
-                  onclick="handleTagClick(event)">
+            <span class="tag position-tag ${state.filters.position?.includes(tag) ? 'selected' : ''}"
+                  data-type="position"
+                  data-tag="${tag}">
                 ${tag} 
-                <i class="fas fa-times" onclick="event.stopPropagation(); handleTagDelete('position', '${tag}')"></i>
+                <i class="fas fa-times" data-action="delete"></i>
             </span>
         `).join('')}
-        <div class="tag-input-container">
-            <input type="text" class="tag-input position-input" placeholder="输入新标签" style="display: none;">
-            <button class="add-tag-btn" onclick="showTagInput(this, 'position')"><i class="fas fa-plus"></i> 新增</button>
-        </div>
+        <button class="add-tag-btn" data-type="position">
+            <i class="fas fa-plus"></i> 新增
+        </button>
     `;
 
-    // 添加输入框事件监听
-    document.querySelectorAll('.tag-input').forEach(input => {
-        input.addEventListener('keypress', handleTagInput);
-        input.addEventListener('blur', hideTagInput);
+    // 添加事件委托
+    addTagEventListeners();
+}
+
+// 添加事件委托函数
+function addTagEventListeners() {
+    // 移除所有现有的事件监听器
+    ['craftTags', 'locationTags', 'positionTags'].forEach(containerId => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        // 移除现有的事件监听器
+        const clone = container.cloneNode(true);
+        container.parentNode.replaceChild(clone, container);
+        
+        // 添加新的事件监听器
+        clone.addEventListener('click', (e) => {
+            const target = e.target;
+            
+            // 处理删除按钮点击
+            if (target.matches('[data-action="delete"]')) {
+                e.stopPropagation();
+                const tag = target.closest('.tag');
+                if (tag) {
+                    const type = tag.dataset.type;
+                    const tagText = tag.dataset.tag;
+                    handleTagDelete(type, tagText);
+                }
+                return;
+            }
+
+            // 处理标签点击
+            const tag = target.closest('.tag');
+            if (tag) {
+                const type = tag.dataset.type;
+                const tagText = tag.dataset.tag;
+                
+                if (!state.filters[type]) {
+                    state.filters[type] = [];
+                }
+                
+                if (state.filters[type].includes(tagText)) {
+                    state.filters[type] = state.filters[type].filter(t => t !== tagText);
+                    tag.classList.remove('selected');
+                } else {
+                    state.filters[type].push(tagText);
+                    tag.classList.add('selected');
+                }
+                
+                debug(`更新${type}过滤器: ${state.filters[type].join(', ')}`, 'info');
+                renderDefects();
+            }
+        });
     });
 }
 
@@ -598,11 +654,25 @@ function initializeResizeHandle() {
 }
 
 // 修改渲染缺陷列表函数
-function renderDefects(defects = state.defects) {
+function renderDefects() {
     const grid = document.getElementById('defectGrid');
     const currentView = grid.classList.contains('view-compact') ? 'compact' : 'normal';
     
-    grid.innerHTML = defects.map(defect => `
+    // 应用过滤器
+    let filteredDefects = filterDefectsByTags();
+    debug(`过滤后显示 ${filteredDefects.length} 个缺陷`, 'info');
+    
+    if (filteredDefects.length === 0) {
+        grid.innerHTML = `
+            <div class="no-results">
+                <i class="fas fa-search"></i>
+                <p>没有找到匹配的缺陷记录</p>
+            </div>
+        `;
+        return;
+    }
+    
+    grid.innerHTML = filteredDefects.map(defect => `
         <div class="defect-card" data-id="${defect.id}">
             <div class="card-header">
                 <span class="defect-id">${defect.id}</span>
@@ -759,7 +829,7 @@ function viewDefect(id) {
             </div>
             <div class="modal-footer">
                 <button class="btn-text" onclick="closeModal()">
-                    <i class="fas fa-arrow-left"></i> 返回列表
+                    <i class="fas fa-arrow-left"></i> ��回列表
                 </button>
                 <button class="btn-text" onclick="editDefect('${defect.id}')">
                     <i class="fas fa-edit"></i> 编辑

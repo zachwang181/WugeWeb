@@ -182,7 +182,7 @@ body {
     gap: 0.75rem;
 }
 
-/* 添加缩放控制器样��� */
+/* 添加缩放控制器样 */
 .view-controls {
     display: flex;
     background: var(--card-bg);
@@ -602,7 +602,7 @@ body.resizing {
     color: white;
 }
 
-/* 添加提示消息���式 */
+/* 添加提示消息式 */
 .toast {
     position: fixed;
     top: 1rem;
@@ -660,6 +660,8 @@ body.resizing {
 .tag.selected {
     box-shadow: 0 0 0 2px var(--primary-color);
     transform: scale(1.05);
+    position: relative;
+    z-index: 1;
 }
 
 .tag i.fa-times {
@@ -974,7 +976,7 @@ body.resizing {
     margin-bottom: 1rem;
 }
 
-/* 必填字段标记 */
+/* 必字段标记 */
 .required-field::after {
     content: '*';
     color: var(--danger-color);
@@ -1081,5 +1083,22 @@ body.resizing {
 .fullscreen-image .close-btn:hover {
     opacity: 1;
     color: var(--danger-color);
+}
+
+/* 添加无结果样式 */
+.no-results {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+}
+
+.no-results i {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.no-results p {
+    font-size: 0.875rem;
 }
   
