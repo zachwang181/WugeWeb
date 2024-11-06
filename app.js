@@ -217,7 +217,7 @@ function loadFromLocalStorage() {
             state.defects = JSON.parse(savedDefects);
             debug(`从本地存储加载缺陷记录成功: ${state.defects.length} 条`, 'success');
         } else {
-            debug('本地��储中未找到缺陷记录', 'warning');
+            debug('本地��中未找到缺陷记录', 'warning');
         }
         
         if (savedTags) {
@@ -321,7 +321,7 @@ function clearAllData() {
             location: ['主卧', '客厅', '厨房', '卫生间', '阳台'],
             position: ['墙面', '地面', '天花', '门窗', '踢脚线']
         };
-        debug('所有数据已清除', 'success');
+        debug('所有数据清除', 'success');
         return true;
     } catch (error) {
         debug(`清除数据失败: ${error.message}`, 'error');
@@ -376,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    debug('系统初始化完成', 'success');
+    debug('系统初始完成', 'success');
 });
 
 // 加载模拟数据
@@ -415,7 +415,7 @@ function handleTagClick(event) {
         state.filters[tagType] = [];
     }
     
-    // 更新过滤状态
+    // 更新过滤状
     if (state.filters[tagType].includes(tagText)) {
         // 如果已经选中，则取消选中
         state.filters[tagType] = state.filters[tagType].filter(t => t !== tagText);
@@ -478,10 +478,16 @@ function renderTags() {
         ${state.tags.craft.map(tag => `
             <span class="tag craft-tag ${state.filters.craft?.includes(tag) ? 'selected' : ''}" 
                   onclick="handleTagClick(event)"
+                  ondblclick="handleTagEdit(event)"
+                  draggable="true"
+                  ondragstart="handleDragStart(event)"
+                  ondragover="handleDragOver(event)"
+                  ondrop="handleDrop(event)"
                   data-type="craft" 
                   data-tag="${tag}">
                 ${tag} 
-                <i class="fas fa-times" onclick="handleTagDelete('craft', '${tag}')"></i>
+                <i class="fas fa-times" onclick="handleTagDelete('craft', '${tag}')" 
+                   style="display: ${isTagInUse('craft', tag) ? 'none' : 'inline'}"></i>
             </span>
         `).join('')}
         <div class="tag-input-container">
@@ -502,10 +508,16 @@ function renderTags() {
         ${state.tags.location.map(tag => `
             <span class="tag location-tag ${state.filters.location?.includes(tag) ? 'selected' : ''}"
                   onclick="handleTagClick(event)"
+                  ondblclick="handleTagEdit(event)"
+                  draggable="true"
+                  ondragstart="handleDragStart(event)"
+                  ondragover="handleDragOver(event)"
+                  ondrop="handleDrop(event)"
                   data-type="location"
                   data-tag="${tag}">
                 ${tag} 
-                <i class="fas fa-times" onclick="handleTagDelete('location', '${tag}')"></i>
+                <i class="fas fa-times" onclick="handleTagDelete('location', '${tag}')" 
+                   style="display: ${isTagInUse('location', tag) ? 'none' : 'inline'}"></i>
             </span>
         `).join('')}
         <div class="tag-input-container">
@@ -526,10 +538,16 @@ function renderTags() {
         ${state.tags.position.map(tag => `
             <span class="tag position-tag ${state.filters.position?.includes(tag) ? 'selected' : ''}"
                   onclick="handleTagClick(event)"
+                  ondblclick="handleTagEdit(event)"
+                  draggable="true"
+                  ondragstart="handleDragStart(event)"
+                  ondragover="handleDragOver(event)"
+                  ondrop="handleDrop(event)"
                   data-type="position"
                   data-tag="${tag}">
                 ${tag} 
-                <i class="fas fa-times" onclick="handleTagDelete('position', '${tag}')"></i>
+                <i class="fas fa-times" onclick="handleTagDelete('position', '${tag}')" 
+                   style="display: ${isTagInUse('position', tag) ? 'none' : 'inline'}"></i>
             </span>
         `).join('')}
         <div class="tag-input-container">
@@ -591,7 +609,7 @@ function addTagEventListeners() {
                     tag.classList.add('selected');
                 }
                 
-                debug(`更新${type}过滤器: ${state.filters[type].join(', ')}`, 'info');
+                debug(`更��${type}过滤器: ${state.filters[type].join(', ')}`, 'info');
                 renderDefects();
             }
         });
@@ -600,6 +618,12 @@ function addTagEventListeners() {
 
 // 处理标签删除
 function handleTagDelete(tagType, tagText) {
+    // 检查标签是否在使用中
+    if (isTagInUse(tagType, tagText)) {
+        showToast('该标签正在使用中，无法删除', 'error');
+        return;
+    }
+    
     if (confirm(`确定要删除"${tagText}"标签吗？`)) {
         state.tags[tagType] = state.tags[tagType].filter(t => t !== tagText);
         state.filters[tagType] = state.filters[tagType].filter(t => t !== tagText);
@@ -607,10 +631,9 @@ function handleTagDelete(tagType, tagText) {
         debug(`删除${tagType}标签: ${tagText}`, 'success');
         showToast('标签删除成功', 'success');
         
-        // 更新���地存储
         saveToLocalStorage();
         renderTags();
-        renderDefects(); // 重新渲染缺陷列表，因为可能有使用该标签的缺陷
+        renderDefects();
     }
 }
 
@@ -645,7 +668,7 @@ function hideTagInput(event) {
     }, 100);
 }
 
-// 修改处理标签输入函数
+// 修改处理标签输入函数，添加同名检查
 function handleTagInput(event) {
     if (event.key === 'Enter') {
         const input = event.target;
@@ -653,7 +676,14 @@ function handleTagInput(event) {
         const tagName = input.value.trim();
         
         if (tagName) {
-            // 直接添加标签，不检查是否存在
+            // 检查是否存在同名标签
+            if (state.tags[tagType].includes(tagName)) {
+                debug(`标签"${tagName}"已存在`, 'warning');
+                input.value = ''; // 清空输入
+                return;
+            }
+            
+            // 添加新标签
             state.tags[tagType].push(tagName);
             debug(`添加${tagType}标签: ${tagName}`, 'success');
             
@@ -757,10 +787,17 @@ function renderDefects() {
             </div>
             ${currentView === 'normal' ? `
                 <div class="card-image" onclick="viewDefect('${defect.id}')">
-                    <img src="${defect.image?.[0] || ''}" alt="${defect.title}">
-                    ${defect.image?.length > 1 ? `
-                        <div class="image-count">+${defect.image.length - 1}</div>
-                    ` : ''}
+                    ${defect.image?.length ? `
+                        <img src="${defect.image[0]}" alt="${defect.title}">
+                        ${defect.image.length > 1 ? `
+                            <div class="image-count">+${defect.image.length - 1}</div>
+                        ` : ''}
+                    ` : `
+                        <div class="no-image-placeholder">
+                            <i class="fas fa-image"></i>
+                            <p>暂无图片</p>
+                        </div>
+                    `}
                 </div>
             ` : ''}
             <div class="card-tags">
@@ -933,7 +970,7 @@ function closeModal() {
     modal.style.display = 'none';
 }
 
-// 删除缺陷
+// 删除陷
 function deleteDefect(id) {
     if (confirm('确定要删除这条缺陷记录吗？')) {
         const index = state.defects.findIndex(d => d.id === id);
@@ -1243,4 +1280,165 @@ function showToast(message, type = 'info') {
         toast.classList.add('toast-hide');
         setTimeout(() => toast.remove(), 300);
     }, 3000);
+}
+
+// 添加检查标签是否在使用的函数
+function isTagInUse(tagType, tagValue) {
+    return state.defects.some(defect => defect.tags[tagType] === tagValue);
+}
+
+// 添加标签编辑处理函数
+function handleTagEdit(event) {
+    event.stopPropagation();
+    const tag = event.currentTarget;
+    const tagType = tag.dataset.type;
+    const oldValue = tag.dataset.tag;
+    
+    // 创建一个临时输入框
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = oldValue;
+    input.className = `tag-input ${tagType}-input`;
+    input.style.width = (tag.offsetWidth - 20) + 'px'; // 减去padding
+    
+    // 处理输入框的按键事件
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+            const newValue = input.value.trim();
+            if (newValue && newValue !== oldValue) {
+                updateTag(tagType, oldValue, newValue);
+            }
+            tag.innerHTML = `${oldValue} <i class="fas fa-times" onclick="handleTagDelete('${tagType}', '${oldValue}')"></i>`;
+            input.remove();
+        } else if (e.key === 'Escape') {
+            tag.innerHTML = `${oldValue} <i class="fas fa-times" onclick="handleTagDelete('${tagType}', '${oldValue}')"></i>`;
+            input.remove();
+        }
+    };
+    
+    // 处理失去焦点事件
+    input.onblur = () => {
+        const newValue = input.value.trim();
+        if (newValue && newValue !== oldValue) {
+            updateTag(tagType, oldValue, newValue);
+        }
+        tag.innerHTML = `${oldValue} <i class="fas fa-times" onclick="handleTagDelete('${tagType}', '${oldValue}')"></i>`;
+        input.remove();
+    };
+    
+    // 替换标签内容为输入框
+    tag.innerHTML = '';
+    tag.appendChild(input);
+    input.focus();
+    input.select();
+}
+
+// 修改更新标签函数，添加同名检查
+function updateTag(tagType, oldValue, newValue) {
+    // 如果新值和旧值相同，不做任何操作
+    if (oldValue === newValue) return;
+    
+    // 检查是否存在同名标签（排除自身）
+    if (state.tags[tagType].some(tag => tag !== oldValue && tag === newValue)) {
+        debug(`标签"${newValue}"已存在`, 'warning');
+        showToast('标签名称已存在', 'warning');
+        return;
+    }
+    
+    // 更新标签数组
+    const index = state.tags[tagType].indexOf(oldValue);
+    if (index !== -1) {
+        state.tags[tagType][index] = newValue;
+    }
+    
+    // 更新所有使用该标签的缺陷记录
+    state.defects.forEach(defect => {
+        if (defect.tags[tagType] === oldValue) {
+            defect.tags[tagType] = newValue;
+        }
+    });
+    
+    // 更新过滤器
+    if (state.filters[tagType].includes(oldValue)) {
+        const filterIndex = state.filters[tagType].indexOf(oldValue);
+        state.filters[tagType][filterIndex] = newValue;
+    }
+    
+    // 保存更改并重新渲染
+    saveToLocalStorage();
+    renderTags();
+    renderDefects();
+    
+    debug(`标签已更新: ${tagType} ${oldValue} -> ${newValue}`, 'success');
+    showToast('标签更新成功', 'success');
+}
+
+// 添加拖拽相关函数
+function handleDragStart(event) {
+    const tag = event.currentTarget;
+    tag.classList.add('dragging');
+    event.dataTransfer.setData('text/plain', JSON.stringify({
+        type: tag.dataset.type,
+        tag: tag.dataset.tag,
+        index: Array.from(tag.parentNode.children).indexOf(tag)
+    }));
+}
+
+function handleDragOver(event) {
+    event.preventDefault();
+    const tag = event.currentTarget;
+    if (tag.classList.contains('tag')) {
+        const draggedTag = document.querySelector('.dragging');
+        if (draggedTag && draggedTag.dataset.type === tag.dataset.type) {
+            const rect = tag.getBoundingClientRect();
+            const midPoint = (rect.left + rect.right) / 2;
+            
+            if (event.clientX < midPoint) {
+                tag.classList.add('drag-before');
+                tag.classList.remove('drag-after');
+            } else {
+                tag.classList.add('drag-after');
+                tag.classList.remove('drag-before');
+            }
+        }
+    }
+}
+
+function handleDrop(event) {
+    event.preventDefault();
+    const targetTag = event.currentTarget;
+    const dragData = JSON.parse(event.dataTransfer.getData('text/plain'));
+    
+    // 确保是同类型标签之间的拖拽
+    if (targetTag.dataset.type === dragData.type) {
+        const tags = state.tags[dragData.type];
+        const draggedTag = tags[dragData.index];
+        const targetIndex = Array.from(targetTag.parentNode.children).indexOf(targetTag);
+        
+        // 从数组中移除拖拽的标签
+        tags.splice(dragData.index, 1);
+        
+        // 在新位置插入标签
+        const newIndex = targetTag.classList.contains('drag-after') ? 
+            targetIndex + 1 : targetIndex;
+        tags.splice(newIndex, 0, draggedTag);
+        
+        // 保存更改并重新渲染
+        saveToLocalStorage();
+        renderTags();
+        
+        debug(`标签排序已更新: ${dragData.type}`, 'success');
+    }
+    
+    // 清除拖拽相关的样式
+    document.querySelectorAll('.tag').forEach(tag => {
+        tag.classList.remove('dragging', 'drag-before', 'drag-after');
+    });
+}
+
+function handleDragEnd(event) {
+    // 清除所有拖拽相关的样式
+    document.querySelectorAll('.tag').forEach(tag => {
+        tag.classList.remove('dragging', 'drag-before', 'drag-after');
+    });
 }

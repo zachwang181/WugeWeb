@@ -153,7 +153,7 @@ body {
     font-weight: 500;
     letter-spacing: 0.025em;
     margin: 0.15rem;
-    cursor: pointer;
+    cursor: default;
     transition: all 0.2s ease;
 }
 
@@ -1103,4 +1103,44 @@ body.resizing {
 .no-results p {
     font-size: 0.875rem;
 }
+
+/* 添加拖拽相关样式 */
+.tag {
+    cursor: default; /* 改为默认鼠标样式 */
+    user-select: none; /* 保留这个以防止文本被选中 */
+}
+
+.tag.dragging {
+    opacity: 0.5;
+    position: relative;
+    z-index: 1000;
+}
+
+.tag.drag-before {
+    border-left: 2px solid var(--primary-color);
+    margin-left: -2px;
+}
+
+.tag.drag-after {
+    border-right: 2px solid var(--primary-color);
+    margin-right: -2px;
+}
+
+/* 拖拽时的过渡效果 */
+.tag-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    padding: 0.25rem;
+    min-height: 2rem;
+}
+
+.tag {
+    transition: transform 0.2s ease;
+}
+
+/* 删除或注释掉这个样式，因为不再需要 */
+/* .tag:active {
+    transform: scale(1.05);
+} */
   
