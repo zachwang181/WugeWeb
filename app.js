@@ -184,7 +184,7 @@ function showDefectModal(mode, defect = null) {
 const state = {
     defects: [],
     tags: {
-        craft: ['砌筑工艺', '抹灰工艺', '防水工艺', '木作工艺', '油漆工艺'],
+        craft: ['砌筑', '抹灰', '防水', '木作', '油漆'],
         location: ['主卧', '客厅', '厨房', '卫生间', '阳台'],
         position: ['墙面', '地面', '天花', '门窗', '踢脚线']
     },
@@ -208,20 +208,29 @@ function saveToLocalStorage() {
 
 function loadFromLocalStorage() {
     try {
+        debug('开始从本地存储加载数据...', 'info');
+        
         const savedDefects = localStorage.getItem('defects');
         const savedTags = localStorage.getItem('tags');
         
         if (savedDefects) {
             state.defects = JSON.parse(savedDefects);
-            debug(`从本地存储加载了 ${state.defects.length} 条缺陷记录`, 'success');
+            debug(`从本地存储加载缺陷记录成功: ${state.defects.length} 条`, 'success');
+        } else {
+            debug('本地��储中未找到缺陷记录', 'warning');
         }
         
         if (savedTags) {
             state.tags = JSON.parse(savedTags);
-            debug('从本地存储加载了标签配置', 'success');
+            debug('从本地存储加载标签配置成功', 'success');
+        } else {
+            debug('使用默认标签配置', 'info');
         }
+        
+        return true;
     } catch (error) {
         debug(`加载本地数据失败: ${error.message}`, 'error');
+        return false;
     }
 }
 
@@ -247,11 +256,6 @@ function initializeEventListeners() {
     // 新增缺陷按钮事件
     document.getElementById('addDefectBtn').addEventListener('click', () => {
         showDefectModal('add');
-    });
-
-    // 新增标签按钮事件
-    document.querySelectorAll('.add-tag-btn').forEach(btn => {
-        btn.addEventListener('click', handleAddTag);
     });
 
     // 添加视图控制器事件
@@ -299,48 +303,90 @@ function migrateImageData() {
     });
 }
 
+// 添加清除数据的函数
+function clearAllData() {
+    try {
+        localStorage.removeItem('defects');
+        localStorage.removeItem('tags');
+        localStorage.removeItem('preferred-view');
+        state.defects = [];
+        state.filters = {
+            craft: [],
+            location: [],
+            position: []
+        };
+        // 重置为默认标签，移除"工艺"后缀
+        state.tags = {
+            craft: ['砌筑', '抹灰', '防水', '木作', '油漆'],
+            location: ['主卧', '客厅', '厨房', '卫生间', '阳台'],
+            position: ['墙面', '地面', '天花', '门窗', '踢脚线']
+        };
+        debug('所有数据已清除', 'success');
+        return true;
+    } catch (error) {
+        debug(`清除数据失败: ${error.message}`, 'error');
+        return false;
+    }
+}
+
 // DOM 加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
-    // 先尝试从本地存储加载数据
-    loadFromLocalStorage();
+    debug('系统初始化开始...', 'info');
     
-    // 如果没有数据，才加载模拟数据
-    if (state.defects.length === 0) {
-        loadMockData();
+    // 除可能存在的示例卡片
+    const defectGrid = document.getElementById('defectGrid');
+    if (defectGrid) {
+        defectGrid.innerHTML = '';
+        debug('清除示例卡片', 'info');
+    }
+    
+    // 加载数据
+    const loadResult = loadFromLocalStorage();
+    
+    // 如果确实没有任何数据，可以选择是否加载示例数据
+    if (!loadResult || state.defects.length === 0) {
+        debug('本地存储为空，但保持为空状态', 'info');
+        // 不再自动加载示例数据
     }
 
     // 数据迁移
+    debug('开始数据迁移检查...', 'info');
     migrateImageData();
     
-    // 保存初数据
+    // 保存初始数据
+    debug('保存数据到本地存储...', 'info');
     saveToLocalStorage();
     
     // 初始化事件监听器
+    debug('初始化事件监听器...', 'info');
     initializeEventListeners();
     
     // 渲染界面
+    debug('开始渲染界面...', 'info');
     renderDefects();
     renderTags();
     
-    // 恢复保存的视图偏好
+    // 恢复视图偏好
     const preferredView = localStorage.getItem('preferred-view');
     if (preferredView) {
+        debug(`恢复视图偏好: ${preferredView}`, 'info');
         const button = document.querySelector(`[data-size="${preferredView}"]`);
         if (button) {
             button.click();
         }
     }
     
-    // ... 其他初始化代码 ...
+    debug('系统初始化完成', 'success');
 });
 
 // 加载模拟数据
 function loadMockData() {
+    debug('开始加载示例数据...', 'info');
     state.defects = [
         {
             id: '001',
             title: '墙面裂缝',
-            image: [], // 改为空数组
+            image: [], 
             tags: {
                 craft: '砌筑工艺',
                 location: '客厅',
@@ -350,19 +396,20 @@ function loadMockData() {
             date: '2024-03-20',
             description: '墙面裂，裂缝宽约0.3mm，位于户角部位置，呈45度角延伸。',
             example: '正确的墙面施工应确保砂浆配比合理，砌筑时应注意砂浆饱满度，避免空鼓。',
-            exampleImages: [], // 初始化为空数组
+            exampleImages: [],
             standard: '根据《建筑工程施工质量验收统一标准》GB50300-2013第5.3.2条规定...',
-            standardImages: [] // 初始化为空数组
+            standardImages: []
         }
     ];
+    debug(`示例数据加载完成: ${state.defects.length} 条记录`, 'success');
 }
 
 // 处理标签点击
-function handleTagClick(e) {
-    const tag = e.currentTarget;
-    const tagSection = tag.closest('.tag-section');
-    const tagType = tagSection.querySelector('h3').textContent.toLowerCase(); // 工艺/位置/部位
-    const tagText = tag.textContent.trim().replace(' ×', '');
+function handleTagClick(event) {
+    event.stopPropagation(); // 阻止事件冒泡
+    const tag = event.currentTarget;
+    const tagType = tag.dataset.type;
+    const tagText = tag.dataset.tag;
     
     if (!state.filters[tagType]) {
         state.filters[tagType] = [];
@@ -384,10 +431,7 @@ function handleTagClick(e) {
 }
 
 // 处理添加标签
-function handleAddTag(e) {
-    const section = e.target.closest('.tag-section');
-    const tagType = section.id.replace('Tags', '');
-    
+function handleAddTag(tagType) {
     const tagName = prompt(`请输入新的${tagType === 'craft' ? '工艺' : 
                                     tagType === 'location' ? '位置' : '部位'}标签：`);
     
@@ -404,7 +448,7 @@ function handleAddTag(e) {
         showToast('标签添加成功', 'success');
         
         // 更新本地存储
-        localStorage.setItem('tags', JSON.stringify(state.tags));
+        saveToLocalStorage();
         renderTags();
     }
 }
@@ -433,49 +477,73 @@ function renderTags() {
     document.getElementById('craftTags').innerHTML = `
         ${state.tags.craft.map(tag => `
             <span class="tag craft-tag ${state.filters.craft?.includes(tag) ? 'selected' : ''}" 
+                  onclick="handleTagClick(event)"
                   data-type="craft" 
                   data-tag="${tag}">
                 ${tag} 
-                <i class="fas fa-times" data-action="delete"></i>
+                <i class="fas fa-times" onclick="handleTagDelete('craft', '${tag}')"></i>
             </span>
         `).join('')}
-        <button class="add-tag-btn" data-type="craft">
-            <i class="fas fa-plus"></i> 新增
-        </button>
+        <div class="tag-input-container">
+            <button class="add-tag-btn" onclick="showTagInput(this, 'craft')">
+                <i class="fas fa-plus"></i> 新增
+            </button>
+            <input type="text" class="tag-input craft-input" 
+                   style="display: none"
+                   onkeydown="handleTagInput(event)"
+                   onblur="hideTagInput(event)"
+                   data-type="craft"
+                   placeholder="输入工艺名称">
+        </div>
     `;
 
     // 渲染位置标签
     document.getElementById('locationTags').innerHTML = `
         ${state.tags.location.map(tag => `
             <span class="tag location-tag ${state.filters.location?.includes(tag) ? 'selected' : ''}"
+                  onclick="handleTagClick(event)"
                   data-type="location"
                   data-tag="${tag}">
                 ${tag} 
-                <i class="fas fa-times" data-action="delete"></i>
+                <i class="fas fa-times" onclick="handleTagDelete('location', '${tag}')"></i>
             </span>
         `).join('')}
-        <button class="add-tag-btn" data-type="location">
-            <i class="fas fa-plus"></i> 新增
-        </button>
+        <div class="tag-input-container">
+            <button class="add-tag-btn" onclick="showTagInput(this, 'location')">
+                <i class="fas fa-plus"></i> 新增
+            </button>
+            <input type="text" class="tag-input location-input" 
+                   style="display: none"
+                   onkeydown="handleTagInput(event)"
+                   onblur="hideTagInput(event)"
+                   data-type="location"
+                   placeholder="输入位置名称">
+        </div>
     `;
 
     // 渲染部位标签
     document.getElementById('positionTags').innerHTML = `
         ${state.tags.position.map(tag => `
             <span class="tag position-tag ${state.filters.position?.includes(tag) ? 'selected' : ''}"
+                  onclick="handleTagClick(event)"
                   data-type="position"
                   data-tag="${tag}">
                 ${tag} 
-                <i class="fas fa-times" data-action="delete"></i>
+                <i class="fas fa-times" onclick="handleTagDelete('position', '${tag}')"></i>
             </span>
         `).join('')}
-        <button class="add-tag-btn" data-type="position">
-            <i class="fas fa-plus"></i> 新增
-        </button>
+        <div class="tag-input-container">
+            <button class="add-tag-btn" onclick="showTagInput(this, 'position')">
+                <i class="fas fa-plus"></i> 新增
+            </button>
+            <input type="text" class="tag-input position-input" 
+                   style="display: none"
+                   onkeydown="handleTagInput(event)"
+                   onblur="hideTagInput(event)"
+                   data-type="position"
+                   placeholder="输入部位名称">
+        </div>
     `;
-
-    // 添加事件委托
-    addTagEventListeners();
 }
 
 // 添加事件委托函数
@@ -539,58 +607,67 @@ function handleTagDelete(tagType, tagText) {
         debug(`删除${tagType}标签: ${tagText}`, 'success');
         showToast('标签删除成功', 'success');
         
-        // 更新本地存储
-        localStorage.setItem('tags', JSON.stringify(state.tags));
+        // 更新���地存储
+        saveToLocalStorage();
         renderTags();
-        filterDefectsByTags(); // 重新过滤显示
+        renderDefects(); // 重新渲染缺陷列表，因为可能有使用该标签的缺陷
     }
 }
 
-// 显示标签输入框
+// 修改显示标签输入框函数
 function showTagInput(btn, type) {
-    const container = btn.parentElement;
+    const container = btn.closest('.tag-input-container');
     const input = container.querySelector('.tag-input');
     btn.style.display = 'none';
     input.style.display = 'inline-block';
-    input.dataset.type = type;
     input.focus();
 }
 
-// 隐藏标签输入框
-function hideTagInput(e) {
-    const input = e.target;
-    const container = input.parentElement;
+// 修改隐藏标签输入框函数
+function hideTagInput(event) {
+    const input = event.target;
+    const container = input.closest('.tag-input-container');
     const btn = container.querySelector('.add-tag-btn');
-    input.style.display = 'none';
-    btn.style.display = 'inline-block';
-    input.value = '';
+    
+    // 如果输入框有值，则添加标签
+    if (input.value.trim()) {
+        handleTagInput({
+            key: 'Enter',
+            target: input
+        });
+    }
+    
+    // 延迟隐藏输入框，以确保标签添加完成
+    setTimeout(() => {
+        input.style.display = 'none';
+        btn.style.display = 'inline-block';
+        input.value = '';
+    }, 100);
 }
 
-// 处理标签输入
-function handleTagInput(e) {
-    if (e.key === 'Enter') {
-        const input = e.target;
+// 修改处理标签输入函数
+function handleTagInput(event) {
+    if (event.key === 'Enter') {
+        const input = event.target;
         const tagType = input.dataset.type;
         const tagName = input.value.trim();
         
         if (tagName) {
-            const normalizedTag = tagType === 'craft' ? `${tagName}工艺` : tagName;
-            
-            if (state.tags[tagType].includes(normalizedTag)) {
-                showToast('标签已存在', 'error');
-                return;
-            }
-            
-            state.tags[tagType].push(normalizedTag);
-            debug(`添加${tagType}标签: ${normalizedTag}`, 'success');
-            showToast('标签添加成功', 'success');
+            // 直接添加标签，不检查是否存在
+            state.tags[tagType].push(tagName);
+            debug(`添加${tagType}标签: ${tagName}`, 'success');
             
             // 更新本地存储
-            localStorage.setItem('tags', JSON.stringify(state.tags));
+            saveToLocalStorage();
             renderTags();
+            
+            // 清空并隐藏输入框
+            input.value = '';
+            const container = input.closest('.tag-input-container');
+            const btn = container.querySelector('.add-tag-btn');
+            input.style.display = 'none';
+            btn.style.display = 'inline-block';
         }
-        
-        hideTagInput(e);
     }
 }
 
@@ -781,7 +858,7 @@ function viewDefect(id) {
                                 defect.image.map(img => `
                                     <img src="${img}" alt="缺陷照片" 
                                         onclick="showFullImage('${img}')" 
-                                        title="点击查看大图">
+                                        title="击查看大图">
                                 `).join('') : 
                                 '<div class="no-image-placeholder"><i class="fas fa-image"></i><p>暂无图片</p></div>'
                             }
@@ -829,7 +906,7 @@ function viewDefect(id) {
             </div>
             <div class="modal-footer">
                 <button class="btn-text" onclick="closeModal()">
-                    <i class="fas fa-arrow-left"></i> ��回列表
+                    <i class="fas fa-arrow-left"></i> 回列表
                 </button>
                 <button class="btn-text" onclick="editDefect('${defect.id}')">
                     <i class="fas fa-edit"></i> 编辑

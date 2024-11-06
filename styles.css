@@ -690,6 +690,8 @@ body.resizing {
     font-size: 0.75rem;
     outline: none;
     transition: all 0.2s;
+    margin: 0.15rem;
+    min-width: 120px;
 }
 
 .tag-input:focus {
