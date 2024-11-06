@@ -321,7 +321,7 @@ function clearAllData() {
             location: ['主卧', '客厅', '厨房', '卫生间', '阳台'],
             position: ['墙面', '地面', '天花', '门窗', '踢脚线']
         };
-        debug('所有数据已除', 'success');
+        debug('所有数据已��', 'success');
         return true;
     } catch (error) {
         debug(`清除数据失败: ${error.message}`, 'error');
@@ -1651,3 +1651,122 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ... 其他初始化代码 ...
 });
+
+// 添加移动端过滤器面板控制
+function initializeMobileFeatures() {
+    // 创建过滤器开关按钮
+    const filterToggle = document.createElement('button');
+    filterToggle.className = 'filter-toggle';
+    filterToggle.innerHTML = '<i class="fas fa-filter"></i>';
+    document.body.appendChild(filterToggle);
+
+    const filterPanel = document.querySelector('.filter-panel');
+
+    // 添加点击事件
+    filterToggle.addEventListener('click', () => {
+        filterPanel.classList.toggle('show');
+    });
+
+    // 添加触摸手势支持
+    let startX = 0;
+    let currentX = 0;
+
+    filterPanel.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+        currentX = startX;
+    });
+
+    filterPanel.addEventListener('touchmove', (e) => {
+        currentX = e.touches[0].clientX;
+        const diff = currentX - startX;
+        
+        if (diff < 0) {
+            filterPanel.style.transform = `translateX(${diff}px)`;
+        }
+    });
+
+    filterPanel.addEventListener('touchend', () => {
+        const diff = currentX - startX;
+        if (diff < -50) {
+            filterPanel.classList.remove('show');
+        }
+        filterPanel.style.transform = '';
+    });
+
+    // 点击内容区域关闭过滤器面板
+    document.querySelector('.content-area').addEventListener('click', () => {
+        if (filterPanel.classList.contains('show')) {
+            filterPanel.classList.remove('show');
+        }
+    });
+}
+
+// 在DOM加载完成后初始化移动端功能
+document.addEventListener('DOMContentLoaded', () => {
+    // 其他初始化代码...
+    
+    // 检测是否为移动设备
+    if (window.innerWidth <= 768) {
+        initializeMobileFeatures();
+    }
+    
+    // 监听窗口大小变化
+    window.addEventListener('resize', () => {
+        if (window.innerWidth <= 768) {
+            initializeMobileFeatures();
+        }
+    });
+});
+
+// 优化图片上传体验
+function handleMultipleImageUpload(input, previewId) {
+    // 添加移动端图片压缩
+    const compressImage = async (file) => {
+        if (!file.type.startsWith('image/')) return null;
+        
+        const maxWidth = 1200;
+        const reader = new FileReader();
+        
+        return new Promise((resolve) => {
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > maxWidth) {
+                        height = (maxWidth * height) / width;
+                        width = maxWidth;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    canvas.toBlob((blob) => {
+                        resolve(blob);
+                    }, 'image/jpeg', 0.8);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    // 修改原有的上传处理逻辑
+    Array.from(input.files).forEach(async (file) => {
+        if (file.size > 5 * 1024 * 1024) {
+            const compressed = await compressImage(file);
+            if (compressed) {
+                handleImageFile(compressed);
+            } else {
+                showToast('图片处理失败', 'error');
+            }
+        } else {
+            handleImageFile(file);
+        }
+    });
+}
