@@ -1043,7 +1043,7 @@ function handleMultipleImageUpload(input, previewId) {
         }
 
         if (file.size > 5 * 1024 * 1024) {
-            showToast('图片大小不能超过5MB', 'error');
+            showToast('图片大���不能超过5MB', 'error');
             return;
         }
 
