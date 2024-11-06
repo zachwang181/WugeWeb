@@ -770,7 +770,7 @@ body.resizing {
     margin-top: 0.5rem;
 }
 
-/* 优化图片预览区域 */
+/* 优���图片预览区域 */
 .detail-images {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
@@ -956,5 +956,31 @@ body.resizing {
     content: '*';
     color: var(--danger-color);
     margin-left: 0.25rem;
+}
+
+/* 添加图片计数样式 */
+.card-image .image-count {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+}
+
+/* 优化图片预览区域样式 */
+.image-preview {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.image-preview-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
 }
   
