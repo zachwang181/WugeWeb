@@ -75,7 +75,7 @@ function loadMockData() {
         {
             id: '001',
             title: '墙面裂缝',
-            image: 'https://via.placeholder.com/300x200',
+            image: '',
             tags: {
                 craft: '砌筑工艺',
                 location: '客厅',
@@ -83,7 +83,11 @@ function loadMockData() {
                 risk: '高风险'
             },
             date: '2024-03-20',
-            description: '墙面开裂，裂缝宽度约0.3mm...'
+            description: '墙面开裂，裂缝宽度约0.3mm，位于窗户角部位置，呈45度角延伸。',
+            example: '正确的墙面施工应确保砂浆配比合理，砌筑时应注意砂浆饱满度，避免空鼓。',
+            exampleImages: [],
+            standard: '根据《建筑工程施工质量验收统一标准》GB50300-2013第5.3.2条规定...',
+            standardImages: []
         }
         // 可以添加更多模拟数据
     ];
@@ -98,9 +102,11 @@ function renderDefects(defects = state.defects) {
                 <span class="defect-id">${defect.id}</span>
                 <h3>${defect.title}</h3>
             </div>
-            <div class="card-image" onclick="viewDefect('${defect.id}')">
-                <img src="${defect.image}" alt="${defect.title}">
-            </div>
+            ${defect.image ? `
+                <div class="card-image" onclick="viewDefect('${defect.id}')">
+                    <img src="${defect.image}" alt="${defect.title}">
+                </div>
+            ` : ''}
             <div class="card-tags">
                 <span class="tag craft-tag">${defect.tags.craft}</span>
                 <span class="tag location-tag">${defect.tags.location}</span>
@@ -149,7 +155,7 @@ function handleTagClick(e) {
     filterDefectsByTags();
 }
 
-// 处理添���标签
+// 处理添标签
 function handleAddTag(e) {
     const section = e.target.closest('.tag-section');
     const tagType = section.id.replace('Tags', '');
@@ -194,7 +200,119 @@ function handleTagDelete(tagType, tagText) {
 // 查看缺陷详情
 function viewDefect(id) {
     const defect = state.defects.find(d => d.id === id);
-    showDefectModal('view', defect);
+    const modal = document.getElementById('defectModal');
+    
+    modal.innerHTML = `
+        <div class="modal-content detail-view">
+            <div class="modal-header">
+                <h2>缺陷详情</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-section">
+                    <h3>基信息</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>编号：</label>
+                            <span>${defect.id}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>缺陷名称：</label>
+                            <span>${defect.title}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>工艺：</label>
+                            <span>${defect.tags.craft}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>位置：</label>
+                            <span>${defect.tags.location}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>部位：</label>
+                            <span>${defect.tags.position}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>风险程度：</label>
+                            <span class="risk-level ${defect.tags.risk.toLowerCase()}">${defect.tags.risk}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>更新时间：</label>
+                            <span>${defect.date}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <h3>缺陷信息</h3>
+                    <div class="detail-content">
+                        <p>${defect.description}</p>
+                        ${defect.image ? `
+                            <div class="detail-images">
+                                <img src="${defect.image}" alt="缺陷照片" onclick="showFullImage(this.src)">
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <h3>示范信息</h3>
+                    <div class="detail-content">
+                        <p>${defect.example || '暂无示范信息'}</p>
+                        <div class="detail-images">
+                            ${defect.exampleImages ? 
+                                defect.exampleImages.map(img => 
+                                    `<img src="${img}" alt="示范照片" onclick="showFullImage(this.src)">`
+                                ).join('') : 
+                                '<p class="no-image">暂无示范照片</p>'
+                            }
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <h3>规范信息</h3>
+                    <div class="detail-content">
+                        <p>${defect.standard || '暂无规范信息'}</p>
+                        <div class="detail-images">
+                            ${defect.standardImages ? 
+                                defect.standardImages.map(img => 
+                                    `<img src="${img}" alt="规范照片" onclick="showFullImage(this.src)">`
+                                ).join('') : 
+                                '<p class="no-image">暂无规范照片</p>'
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-text" onclick="closeModal()">
+                    <i class="fas fa-arrow-left"></i> 返回列表
+                </button>
+                <button class="btn-text" onclick="editDefect('${defect.id}')">
+                    <i class="fas fa-edit"></i> 编辑
+                </button>
+                <button class="btn-text danger" onclick="deleteDefect('${defect.id}')">
+                    <i class="fas fa-trash"></i> 删除
+                </button>
+            </div>
+        </div>
+    `;
+    
+    modal.style.display = 'block';
+}
+
+// 添加图片全屏查看功能
+function showFullImage(src) {
+    const modal = document.createElement('div');
+    modal.className = 'image-modal';
+    modal.innerHTML = `
+        <div class="image-modal-content">
+            <img src="${src}" alt="全屏图片">
+            <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
 }
 
 // 编辑缺陷
@@ -281,7 +399,7 @@ function showDefectModal(type, defect = null) {
                     <div class="form-group">
                         <label>风险等级</label>
                         <select class="form-control" id="defectRisk" ${isView ? 'disabled' : ''}>
-                            <option value="低风险" ${defect?.tags.risk === '低风险' ? 'selected' : ''}>低风���</option>
+                            <option value="低风险" ${defect?.tags.risk === '低风险' ? 'selected' : ''}>低风险</option>
                             <option value="中风险" ${defect?.tags.risk === '中风险' ? 'selected' : ''}>中风险</option>
                             <option value="高风险" ${defect?.tags.risk === '高风险' ? 'selected' : ''}>高风险</option>
                         </select>
@@ -298,16 +416,93 @@ function showDefectModal(type, defect = null) {
                     <h3>缺陷照片</h3>
                     ${isView ? `
                         <div class="image-preview">
-                            <img src="${defect?.image || ''}" alt="缺陷照片">
+                            ${defect?.image ? 
+                                `<img src="${defect.image}" alt="缺陷照片" onclick="showFullImage(this.src)">` : 
+                                '<p class="no-image">暂无缺陷照片</p>'
+                            }
                         </div>
                     ` : `
-                        <div class="image-upload-area" onclick="document.getElementById('imageUpload').click()">
+                        <div class="image-upload-area" onclick="document.getElementById('defectImageUpload').click()">
                             <i class="fas fa-cloud-upload-alt"></i>
-                            <p>点击或拖拽上传图片</p>
-                            <input type="file" id="imageUpload" hidden accept="image/*" onchange="handleImageUpload(this)">
+                            <p>点击或拖拽上传缺陷照片</p>
+                            <input type="file" id="defectImageUpload" hidden accept="image/*" 
+                                onchange="handleSingleImageUpload(this, 'defectPreview')">
                         </div>
-                        <div class="image-preview" id="imagePreview">
-                            ${defect?.image ? `<img src="${defect.image}" alt="缺陷照片">` : ''}
+                        <div class="image-preview" id="defectPreview">
+                            ${defect?.image ? `
+                                <div class="image-preview-container">
+                                    <img src="${defect.image}" alt="缺陷照片">
+                                    <button class="btn-text danger" onclick="removePreviewImage(this)" title="删除图片">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `}
+                </div>
+
+                <div class="modal-section">
+                    <h3>示范信息</h3>
+                    <div class="form-group">
+                        <label>示范说明</label>
+                        <textarea class="form-control" id="defectExample" rows="4" 
+                            ${isView ? 'readonly' : ''}>${defect?.example || ''}</textarea>
+                    </div>
+                    ${isView ? `
+                        <div class="image-preview">
+                            ${defect?.exampleImages?.map(img => 
+                                `<img src="${img}" alt="示范照片" onclick="showFullImage(this.src)">`
+                            ).join('') || '<p class="no-image">暂无示范照片</p>'}
+                        </div>
+                    ` : `
+                        <div class="image-upload-area" onclick="document.getElementById('exampleImageUpload').click()">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>点击或拖拽上传示范照片</p>
+                            <input type="file" id="exampleImageUpload" hidden accept="image/*" multiple 
+                                onchange="handleMultiImageUpload(this, 'examplePreview')">
+                        </div>
+                        <div class="image-preview" id="examplePreview">
+                            ${defect?.exampleImages?.map(img => `
+                                <div class="image-preview-container">
+                                    <img src="${img}" alt="示范照片">
+                                    <button class="btn-text danger" onclick="removePreviewImage(this)" title="删除图片">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            `).join('') || ''}
+                        </div>
+                    `}
+                </div>
+
+                <div class="modal-section">
+                    <h3>规范信息</h3>
+                    <div class="form-group">
+                        <label>规范说明</label>
+                        <textarea class="form-control" id="defectStandard" rows="4" 
+                            ${isView ? 'readonly' : ''}>${defect?.standard || ''}</textarea>
+                    </div>
+                    ${isView ? `
+                        <div class="image-preview">
+                            ${defect?.standardImages?.map(img => 
+                                `<img src="${img}" alt="规范照片" onclick="showFullImage(this.src)">`
+                            ).join('') || '<p class="no-image">暂无规范照片</p>'}
+                        </div>
+                    ` : `
+                        <div class="image-upload-area" onclick="document.getElementById('standardImageUpload').click()">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>点击或拖拽上传规范照片</p>
+                            <input type="file" id="standardImageUpload" hidden accept="image/*" multiple 
+                                onchange="handleMultiImageUpload(this, 'standardPreview')">
+                        </div>
+                        <div class="image-preview" id="standardPreview">
+                            ${defect?.standardImages?.map(img => `
+                                <div class="image-preview-container">
+                                    <img src="${img}" alt="规范照片">
+                                    <button class="btn-text danger" onclick="removePreviewImage(this)" title="删除图片">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            `).join('') || ''}
                         </div>
                     `}
                 </div>
@@ -340,50 +535,107 @@ function closeModal() {
     modal.style.display = 'none';
 }
 
-// 处理图片上传
-function handleImageUpload(input) {
+// 添加单张图片上传处理函数
+function handleSingleImageUpload(input, previewId) {
     const file = input.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('imagePreview').innerHTML = `
+    const preview = document.getElementById(previewId);
+    
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        showToast('请上传图片文件', 'error');
+        return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('图片大小不能超过5MB', 'error');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        preview.innerHTML = `
+            <div class="image-preview-container">
                 <img src="${e.target.result}" alt="预览图片">
-            `;
-        };
-        reader.readAsDataURL(file);
-    }
-}
-
-// 保存缺陷
-function saveDefect(id) {
-    const defect = {
-        id: document.getElementById('defectId').value,
-        title: document.getElementById('defectTitle').value,
-        tags: {
-            craft: document.getElementById('defectCraft').value,
-            location: document.getElementById('defectLocation').value,
-            position: document.getElementById('defectPosition').value,
-            risk: document.getElementById('defectRisk').value
-        },
-        description: document.getElementById('defectDescription').value,
-        image: document.querySelector('#imagePreview img')?.src || '',
-        date: new Date().toISOString().split('T')[0]
+                <button class="btn-text danger" onclick="removePreviewImage(this)" title="删除图片">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
     };
-
-    const index = state.defects.findIndex(d => d.id === id);
-    if (index !== -1) {
-        state.defects[index] = defect;
-    }
-
-    renderDefects();
-    closeModal();
+    reader.onerror = function() {
+        showToast('图片读取失败，请重试', 'error');
+    };
+    reader.readAsDataURL(file);
 }
 
-// 修改 addDefect 函数
+// 修改表单验证函数
+function validateForm(data) {
+    const errors = [];
+    
+    // 只验证必填的基础信息
+    if (!data.title) {
+        errors.push('缺陷名称不能为空');
+    }
+    
+    if (!data.description) {
+        errors.push('缺陷描述不能为空');
+    }
+    
+    if (!data.tags.craft || !data.tags.location || !data.tags.position || !data.tags.risk) {
+        errors.push('请完整填写标签信息');
+    }
+
+    return errors;
+}
+
+// 修改保存函数
+function saveDefect(id) {
+    try {
+        const defect = {
+            id: document.getElementById('defectId').value,
+            title: document.getElementById('defectTitle').value.trim(),
+            tags: {
+                craft: document.getElementById('defectCraft').value,
+                location: document.getElementById('defectLocation').value,
+                position: document.getElementById('defectPosition').value,
+                risk: document.getElementById('defectRisk').value
+            },
+            description: document.getElementById('defectDescription').value.trim(),
+            image: document.querySelector('#defectPreview img')?.src || '',
+            example: document.getElementById('defectExample')?.value?.trim() || '',
+            exampleImages: Array.from(document.querySelectorAll('#examplePreview img')).map(img => img.src) || [],
+            standard: document.getElementById('defectStandard')?.value?.trim() || '',
+            standardImages: Array.from(document.querySelectorAll('#standardPreview img')).map(img => img.src) || [],
+            date: new Date().toISOString().split('T')[0]
+        };
+
+        // 表单验证
+        const validationErrors = validateForm(defect);
+        if (validationErrors.length > 0) {
+            throw new Error(validationErrors.join('\n'));
+        }
+
+        const index = state.defects.findIndex(d => d.id === id);
+        if (index !== -1) {
+            state.defects[index] = defect;
+            debug(`缺陷更新成功 - ID: ${id}`, 'success');
+            showToast('保存成功', 'success');
+        }
+
+        saveToLocalStorage();
+        renderDefects();
+        closeModal();
+    } catch (error) {
+        debug(`保存缺陷失败: ${error.message}`, 'error');
+        showToast(error.message, 'error');
+    }
+}
+
+// 修改添加缺陷函数
 function addDefect() {
     debug('添加新缺陷', 'info');
     try {
-        // 自动生成新编��
         const newId = generateNewId();
         
         const defect = {
@@ -397,6 +649,10 @@ function addDefect() {
             },
             description: document.getElementById('defectDescription').value.trim(),
             image: document.querySelector('#imagePreview img')?.src || '',
+            example: document.getElementById('defectExample')?.value?.trim() || '',
+            exampleImages: Array.from(document.querySelectorAll('#examplePreview img')).map(img => img.src) || [],
+            standard: document.getElementById('defectStandard')?.value?.trim() || '',
+            standardImages: Array.from(document.querySelectorAll('#standardPreview img')).map(img => img.src) || [],
             date: new Date().toISOString().split('T')[0]
         };
 
@@ -410,7 +666,6 @@ function addDefect() {
         debug(`新缺陷添加成功 - ID: ${newId}`, 'success');
         showToast('添加成功', 'success');
         
-        // 保存到本地存储
         saveToLocalStorage();
         renderDefects();
         closeModal();
@@ -420,13 +675,13 @@ function addDefect() {
     }
 }
 
-// 添加生成��ID的函数
+// 添加生成ID的函数
 function generateNewId() {
     const maxId = Math.max(...state.defects.map(d => parseInt(d.id)), 0);
     return String(maxId + 1).padStart(3, '0');
 }
 
-// ���滤缺陷列表
+// 滤缺陷列表
 function filterDefects(keyword) {
     const filtered = state.defects.filter(defect => 
         defect.title.includes(keyword) ||
@@ -519,112 +774,44 @@ function resetForm() {
     });
 }
 
-// 优化图片上传预览
-function handleImageUpload(input) {
-    debug('开始上传图片', 'info');
-    const file = input.files[0];
-    if (file) {
-        // 验证文件类型和大小
+// 添加多图片上传处理函数
+function handleMultiImageUpload(input, previewId) {
+    const files = Array.from(input.files);
+    const preview = document.getElementById(previewId);
+    
+    files.forEach(file => {
         if (!file.type.startsWith('image/')) {
-            debug('上传失败：文件类型不是图片', 'error');
-            alert('请上传图片文件');
+            showToast('请上传图片文件', 'error');
             return;
         }
 
         if (file.size > 5 * 1024 * 1024) {
-            debug('上传失败：图片大小超过5MB', 'error');
-            alert('图片大小不能超过5MB');
+            showToast('图片大小不能超过5MB', 'error');
             return;
         }
 
         const reader = new FileReader();
         reader.onload = function(e) {
-            const preview = document.getElementById('imagePreview');
-            preview.innerHTML = `
-                <div class="image-preview-container">
-                    <img src="${e.target.result}" alt="预览图片">
-                    <button class="btn-text danger" onclick="removeImage()" title="删除图片">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
+            const container = document.createElement('div');
+            container.className = 'image-preview-container';
+            container.innerHTML = `
+                <img src="${e.target.result}" alt="预览图片">
+                <button class="btn-text danger" onclick="removePreviewImage(this)" title="删除图片">
+                    <i class="fas fa-times"></i>
+                </button>
             `;
-            debug('图片上传成功', 'success');
+            preview.appendChild(container);
         };
         reader.onerror = function() {
-            debug('图片读取失败', 'error');
-            alert('图片读取失败，请重试');
+            showToast('图片读取失败，请重试', 'error');
         };
         reader.readAsDataURL(file);
-    }
+    });
 }
 
-// 添加删除图片功能
-function removeImage() {
-    debug('删除图片', 'info');
-    document.getElementById('imagePreview').innerHTML = '';
-    document.getElementById('imageUpload').value = '';
-}
-
-// 优化保存功能
-function saveDefect(id) {
-    debug(`准备保存缺陷 - ID: ${id}`, 'info');
-    try {
-        // 获取表单数据
-        const formData = {
-            id: document.getElementById('defectId').value,
-            title: document.getElementById('defectTitle').value.trim(),
-            tags: {
-                craft: document.getElementById('defectCraft').value,
-                location: document.getElementById('defectLocation').value,
-                position: document.getElementById('defectPosition').value,
-                risk: document.getElementById('defectRisk').value
-            },
-            description: document.getElementById('defectDescription').value.trim(),
-            image: document.querySelector('#imagePreview img')?.src || '',
-            date: new Date().toISOString().split('T')[0]
-        };
-
-        // 表单验证
-        const validationErrors = validateForm(formData);
-        if (validationErrors.length > 0) {
-            throw new Error(validationErrors.join('\n'));
-        }
-
-        // 保存数据
-        const index = state.defects.findIndex(d => d.id === id);
-        if (index !== -1) {
-            state.defects[index] = formData;
-            debug(`缺陷更新成功 - ID: ${id}`, 'success');
-            showToast('保存成功', 'success');
-        }
-
-        // 保存到本地存储
-        saveToLocalStorage();
-        renderDefects();
-        closeModal();
-    } catch (error) {
-        debug(`保存缺陷失败: ${error.message}`, 'error');
-        showToast(error.message, 'error');
-    }
-}
-
-// 添加表单验证函数
-function validateForm(data) {
-    const errors = [];
-    
-    if (!data.title) {
-        errors.push('缺陷名称不能为空');
-    }
-    
-    if (!data.description) {
-        errors.push('缺陷描述不能为空');
-    }
-    
-    if (!data.image) {
-        errors.push('请上传缺陷照片');
-    }
-
-    return errors;
+// 添加删除预览图片函数
+function removePreviewImage(button) {
+    button.closest('.image-preview-container').remove();
 }
 
 // 添加提示消息功能
