@@ -16,8 +16,18 @@ const state = {
 // DOM 加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
     initializeEventListeners();
-    loadMockData();
+    
+    // 先尝试从本地存储加载数据
+    loadFromLocalStorage();
+    
+    // 如果没有数据，才加载模拟数据
+    if (state.defects.length === 0) {
+        loadMockData();
+        saveToLocalStorage(); // 保存初始数据
+    }
+    
     renderDefects();
+    
     const preferredView = localStorage.getItem('preferred-view');
     if (preferredView) {
         const button = document.querySelector(`[data-size="${preferredView}"]`);
@@ -35,6 +45,12 @@ document.addEventListener('DOMContentLoaded', () => {
         contentArea.style.marginLeft = savedWidth;
     }
 
+    // 从本地存储加载标签数据
+    const savedTags = localStorage.getItem('tags');
+    if (savedTags) {
+        state.tags = JSON.parse(savedTags);
+    }
+    
     renderTags();
 });
 
@@ -167,7 +183,7 @@ function handleAddTag(e) {
         const normalizedTag = tagType === 'craft' ? `${tagName.trim()}工艺` : tagName.trim();
         
         if (state.tags[tagType].includes(normalizedTag)) {
-            showToast('标签已存在', 'error');
+            showToast('签已存在', 'error');
             return;
         }
         
@@ -209,77 +225,89 @@ function viewDefect(id) {
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="detail-section">
-                    <h3>基信息</h3>
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <label>编号：</label>
-                            <span>${defect.id}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>缺陷名称：</label>
-                            <span>${defect.title}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>工艺：</label>
-                            <span>${defect.tags.craft}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>位置：</label>
-                            <span>${defect.tags.location}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>部位：</label>
-                            <span>${defect.tags.position}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>风险程度：</label>
-                            <span class="risk-level ${defect.tags.risk.toLowerCase()}">${defect.tags.risk}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>更新时间：</label>
-                            <span>${defect.date}</span>
-                        </div>
+                <div class="detail-section basic-info">
+                    <div class="section-title">
+                        <i class="fas fa-info-circle"></i>基础信息
                     </div>
-                </div>
-                
-                <div class="detail-section">
-                    <h3>缺陷信息</h3>
-                    <div class="detail-content">
-                        <p>${defect.description}</p>
-                        ${defect.image ? `
-                            <div class="detail-images">
-                                <img src="${defect.image}" alt="缺陷照片" onclick="showFullImage(this.src)">
+                    <div class="section-content">
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <label>编号：</label>
+                                <span>${defect.id}</span>
                             </div>
-                        ` : ''}
+                            <div class="detail-item">
+                                <label>缺陷名称：</label>
+                                <span>${defect.title}</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>工艺：</label>
+                                <span>${defect.tags.craft}</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>位置：</label>
+                                <span>${defect.tags.location}</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>部位：</label>
+                                <span>${defect.tags.position}</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>风险程度：</label>
+                                <span class="risk-level ${defect.tags.risk}">${defect.tags.risk}</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>更新时间：</label>
+                                <span>${defect.date}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="detail-section">
-                    <h3>示范信息</h3>
-                    <div class="detail-content">
-                        <p>${defect.example || '暂无示范信息'}</p>
+                <div class="detail-section defect-info">
+                    <div class="section-title">
+                        <i class="fas fa-exclamation-triangle"></i>缺陷信息
+                    </div>
+                    <div class="section-content">
+                        <p>${defect.description}</p>
                         <div class="detail-images">
-                            ${defect.exampleImages ? 
+                            ${defect.image ? `
+                                <img src="${defect.image}" alt="缺陷照片" 
+                                    onclick="showFullImage(this.src)" 
+                                    title="点击查看大图">
+                            ` : '<div class="no-image-placeholder"><i class="fas fa-image"></i><p>暂无图片</p></div>'}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section example-info">
+                    <div class="section-title">
+                        <i class="fas fa-check-circle"></i>示范信息
+                    </div>
+                    <div class="section-content">
+                        <p>${defect.example}</p>
+                        <div class="detail-images">
+                            ${defect.exampleImages?.length ? 
                                 defect.exampleImages.map(img => 
                                     `<img src="${img}" alt="示范照片" onclick="showFullImage(this.src)">`
                                 ).join('') : 
-                                '<p class="no-image">暂无示范照片</p>'
+                                '<div class="no-image-placeholder"><i class="fas fa-image"></i><p>暂无图片</p></div>'
                             }
                         </div>
                     </div>
                 </div>
-                
-                <div class="detail-section">
-                    <h3>规范信息</h3>
-                    <div class="detail-content">
-                        <p>${defect.standard || '暂无规范信息'}</p>
+
+                <div class="detail-section standard-info">
+                    <div class="section-title">
+                        <i class="fas fa-book"></i>规范信息
+                    </div>
+                    <div class="section-content">
+                        <p>${defect.standard}</p>
                         <div class="detail-images">
-                            ${defect.standardImages ? 
+                            ${defect.standardImages?.length ? 
                                 defect.standardImages.map(img => 
                                     `<img src="${img}" alt="规范照片" onclick="showFullImage(this.src)">`
                                 ).join('') : 
-                                '<p class="no-image">暂无规范照片</p>'
+                                '<div class="no-image-placeholder"><i class="fas fa-image"></i><p>暂无图片</p></div>'
                             }
                         </div>
                     </div>
@@ -302,14 +330,14 @@ function viewDefect(id) {
     modal.style.display = 'block';
 }
 
-// 添加图片全屏查看功能
+// 添加查看大图功能
 function showFullImage(src) {
     const modal = document.createElement('div');
-    modal.className = 'image-modal';
+    modal.className = 'modal fullscreen-image';
     modal.innerHTML = `
-        <div class="image-modal-content">
-            <img src="${src}" alt="全屏图片">
-            <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
+        <div class="modal-content" style="background: transparent; box-shadow: none; max-width: 90vw;">
+            <img src="${src}" style="max-width: 100%; max-height: 90vh; object-fit: contain;">
+            <button class="close-btn" onclick="this.parentElement.parentElement.remove()">&times;</button>
         </div>
     `;
     document.body.appendChild(modal);
@@ -323,212 +351,188 @@ function editDefect(id) {
 
 // 删除缺陷
 function deleteDefect(id) {
-    if (confirm('确定要删除这个缺陷记录吗？')) {
-        state.defects = state.defects.filter(d => d.id !== id);
-        renderDefects();
+    if (confirm('确定要删除这条缺陷记录吗？')) {
+        const index = state.defects.findIndex(d => d.id === id);
+        if (index !== -1) {
+            state.defects.splice(index, 1);
+            saveToLocalStorage(); // 保存更改
+            renderDefects();
+            showToast('删除成功', 'success');
+        }
     }
 }
 
-// 显示缺陷模态框
-function showDefectModal(type, defect = null) {
-    debug(`打开${type}模态框 ${defect ? `- ID: ${defect.id}` : ''}`, 'info');
-    
-    // 1. 首先定义所有需要的变量
+// 显示新增/编辑缺陷模态框
+function showDefectModal(mode, id = null) {
+    const defect = id ? state.defects.find(d => d.id === id) : null;
     const modal = document.getElementById('defectModal');
-    const isView = type === 'view';
-    const isEdit = type === 'edit';
-    const isAdd = type === 'add';
-
-    // 2. 准备选项数据
-    const craftOptions = state.tags.craft.map(tag => `
-        <option value="${tag}" ${defect?.tags.craft === tag ? 'selected' : ''}>
-            ${tag}
-        </option>
-    `).join('');
-
-    const locationOptions = state.tags.location.map(tag => `
-        <option value="${tag}" ${defect?.tags.location === tag ? 'selected' : ''}>
-            ${tag}
-        </option>
-    `).join('');
-
-    const positionOptions = state.tags.position.map(tag => `
-        <option value="${tag}" ${defect?.tags.position === tag ? 'selected' : ''}>
-            ${tag}
-        </option>
-    `).join('');
-
-    // 3. 构建模态框内容
+    
     modal.innerHTML = `
-        <div class="modal-content">
+        <div class="modal-content detail-view">
             <div class="modal-header">
-                <h2>${isAdd ? '新增缺陷' : isEdit ? '编辑缺陷' : '缺陷详情'}</h2>
+                <h2>${mode === 'add' ? '新增缺陷' : '编辑缺陷'}</h2>
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="modal-section">
-                    <h3>基础信息</h3>
-                    <div class="form-group">
-                        <label>缺陷编号</label>
-                        <input type="text" class="form-control" id="defectId" 
-                            value="${defect?.id || ''}" ${isView ? 'readonly' : isAdd ? 'readonly' : ''}>
-                    </div>
-                    <div class="form-group">
-                        <label>缺陷名称</label>
-                        <input type="text" class="form-control" id="defectTitle" 
-                            value="${defect?.title || ''}" ${isView ? 'readonly' : ''}>
-                    </div>
-                    <div class="form-group">
-                        <label>工艺</label>
-                        <select class="form-control" id="defectCraft" ${isView ? 'disabled' : ''}>
-                            ${craftOptions}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>位置</label>
-                        <select class="form-control" id="defectLocation" ${isView ? 'disabled' : ''}>
-                            ${locationOptions}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>部位</label>
-                        <select class="form-control" id="defectPosition" ${isView ? 'disabled' : ''}>
-                            ${positionOptions}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>风险等级</label>
-                        <select class="form-control" id="defectRisk" ${isView ? 'disabled' : ''}>
-                            <option value="低风险" ${defect?.tags.risk === '低风险' ? 'selected' : ''}>低风险</option>
-                            <option value="中风险" ${defect?.tags.risk === '中风险' ? 'selected' : ''}>中风险</option>
-                            <option value="高风险" ${defect?.tags.risk === '高风险' ? 'selected' : ''}>高风险</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-section">
-                    <h3>缺陷描述</h3>
-                    <div class="form-group">
-                        <textarea class="form-control" id="defectDescription" rows="4" 
-                            ${isView ? 'readonly' : ''}>${defect?.description || ''}</textarea>
-                    </div>
-                </div>
-                <div class="modal-section">
-                    <h3>缺陷照片</h3>
-                    ${isView ? `
-                        <div class="image-preview">
-                            ${defect?.image ? 
-                                `<img src="${defect.image}" alt="缺陷照片" onclick="showFullImage(this.src)">` : 
-                                '<p class="no-image">暂无缺陷照片</p>'
-                            }
+                <form id="defectForm" onsubmit="handleDefectSubmit(event, '${mode}', '${id || ''}')">
+                    <div class="detail-section basic-info">
+                        <div class="section-title">
+                            <i class="fas fa-info-circle"></i>基础信息
                         </div>
-                    ` : `
-                        <div class="image-upload-area" onclick="document.getElementById('defectImageUpload').click()">
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            <p>点击或拖拽上传缺陷照片</p>
-                            <input type="file" id="defectImageUpload" hidden accept="image/*" 
-                                onchange="handleSingleImageUpload(this, 'defectPreview')">
-                        </div>
-                        <div class="image-preview" id="defectPreview">
-                            ${defect?.image ? `
-                                <div class="image-preview-container">
-                                    <img src="${defect.image}" alt="缺陷照片">
-                                    <button class="btn-text danger" onclick="removePreviewImage(this)" title="删除图片">
-                                        <i class="fas fa-times"></i>
-                                    </button>
+                        <div class="section-content">
+                            <div class="form-grid">
+                                <div class="form-item">
+                                    <label class="required-field">缺陷名称</label>
+                                    <input type="text" id="defectTitle" required 
+                                        value="${defect?.title || ''}" 
+                                        placeholder="请输入缺陷名称">
                                 </div>
-                            ` : ''}
+                                <div class="form-item">
+                                    <label class="required-field">工艺类型</label>
+                                    <select id="defectCraft" required>
+                                        <option value="">请选择工艺类型</option>
+                                        ${state.tags.craft.map(tag => `
+                                            <option value="${tag}" ${defect?.tags.craft === tag ? 'selected' : ''}>
+                                                ${tag}
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                                <div class="form-item">
+                                    <label class="required-field">位置</label>
+                                    <select id="defectLocation" required>
+                                        <option value="">请选择位置</option>
+                                        ${state.tags.location.map(tag => `
+                                            <option value="${tag}" ${defect?.tags.location === tag ? 'selected' : ''}>
+                                                ${tag}
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                                <div class="form-item">
+                                    <label class="required-field">部位</label>
+                                    <select id="defectPosition" required>
+                                        <option value="">请选择部位</option>
+                                        ${state.tags.position.map(tag => `
+                                            <option value="${tag}" ${defect?.tags.position === tag ? 'selected' : ''}>
+                                                ${tag}
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                                <div class="form-item">
+                                    <label class="required-field">风险程度</label>
+                                    <select id="defectRisk" required>
+                                        <option value="">请选择风险等级</option>
+                                        <option value="低风险" ${defect?.tags.risk === '低风险' ? 'selected' : ''}>低风险</option>
+                                        <option value="中风险" ${defect?.tags.risk === '中风险' ? 'selected' : ''}>中风险</option>
+                                        <option value="高风险" ${defect?.tags.risk === '高风险' ? 'selected' : ''}>高风险</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
-                    `}
-                </div>
+                    </div>
 
-                <div class="modal-section">
-                    <h3>示范信息</h3>
-                    <div class="form-group">
-                        <label>示范说明</label>
-                        <textarea class="form-control" id="defectExample" rows="4" 
-                            ${isView ? 'readonly' : ''}>${defect?.example || ''}</textarea>
-                    </div>
-                    ${isView ? `
-                        <div class="image-preview">
-                            ${defect?.exampleImages?.map(img => 
-                                `<img src="${img}" alt="示范照片" onclick="showFullImage(this.src)">`
-                            ).join('') || '<p class="no-image">暂无示范照片</p>'}
-                        </div>
-                    ` : `
-                        <div class="image-upload-area" onclick="document.getElementById('exampleImageUpload').click()">
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            <p>点击或拖拽上传示范照片</p>
-                            <input type="file" id="exampleImageUpload" hidden accept="image/*" multiple 
-                                onchange="handleMultiImageUpload(this, 'examplePreview')">
-                        </div>
-                        <div class="image-preview" id="examplePreview">
-                            ${defect?.exampleImages?.map(img => `
-                                <div class="image-preview-container">
-                                    <img src="${img}" alt="示范照片">
-                                    <button class="btn-text danger" onclick="removePreviewImage(this)" title="删除图片">
-                                        <i class="fas fa-times"></i>
-                                    </button>
+                    <div class="detail-section defect-info">
+                        <div class="section-title">缺陷信息</div>
+                        <div class="section-content">
+                            <div class="form-item">
+                                <label>缺陷描述</label>
+                                <textarea id="defectDescription" required rows="3" 
+                                    placeholder="详细描述缺陷情况">${defect?.description || ''}</textarea>
+                            </div>
+                            <div class="form-item">
+                                <label>缺陷照片</label>
+                                <div class="image-upload-area" onclick="document.getElementById('defectImage').click()">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <p>点击或拖拽上传图片</p>
                                 </div>
-                            `).join('') || ''}
+                                <input type="file" id="defectImage" hidden accept="image/*" 
+                                    onchange="handleSingleImageUpload(this, 'defectImagePreview')">
+                                <div id="defectImagePreview" class="image-preview">
+                                    ${defect?.image ? `
+                                        <div class="image-preview-container">
+                                            <img src="${defect.image}" alt="缺陷照片">
+                                            <button type="button" class="btn-text danger" onclick="removePreviewImage(this)">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
                         </div>
-                    `}
-                </div>
+                    </div>
 
-                <div class="modal-section">
-                    <h3>规范信息</h3>
-                    <div class="form-group">
-                        <label>规范说明</label>
-                        <textarea class="form-control" id="defectStandard" rows="4" 
-                            ${isView ? 'readonly' : ''}>${defect?.standard || ''}</textarea>
-                    </div>
-                    ${isView ? `
-                        <div class="image-preview">
-                            ${defect?.standardImages?.map(img => 
-                                `<img src="${img}" alt="规范照片" onclick="showFullImage(this.src)">`
-                            ).join('') || '<p class="no-image">暂无规范照片</p>'}
-                        </div>
-                    ` : `
-                        <div class="image-upload-area" onclick="document.getElementById('standardImageUpload').click()">
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            <p>点击或拖拽上传规范照片</p>
-                            <input type="file" id="standardImageUpload" hidden accept="image/*" multiple 
-                                onchange="handleMultiImageUpload(this, 'standardPreview')">
-                        </div>
-                        <div class="image-preview" id="standardPreview">
-                            ${defect?.standardImages?.map(img => `
-                                <div class="image-preview-container">
-                                    <img src="${img}" alt="规范照片">
-                                    <button class="btn-text danger" onclick="removePreviewImage(this)" title="删除图片">
-                                        <i class="fas fa-times"></i>
-                                    </button>
+                    <div class="detail-section example-info">
+                        <div class="section-title">示范信息</div>
+                        <div class="section-content">
+                            <div class="form-item">
+                                <label>示范说明</label>
+                                <textarea id="defectExample" rows="3" 
+                                    placeholder="描述正确的施工方法">${defect?.example || ''}</textarea>
+                            </div>
+                            <div class="form-item">
+                                <label>示范照片</label>
+                                <div class="image-upload-area" onclick="document.getElementById('exampleImages').click()">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <p>点击或拖拽上传图片</p>
                                 </div>
-                            `).join('') || ''}
+                                <input type="file" id="exampleImages" hidden accept="image/*" multiple 
+                                    onchange="handleMultipleImageUpload(this, 'examplePreview')">
+                                <div id="examplePreview" class="image-preview">
+                                    ${defect?.exampleImages?.map(img => `
+                                        <div class="image-preview-container">
+                                            <img src="${img}" alt="示范照片">
+                                            <button type="button" class="btn-text danger" onclick="removePreviewImage(this)">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    `).join('') || ''}
+                                </div>
+                            </div>
                         </div>
-                    `}
-                </div>
+                    </div>
+
+                    <div class="detail-section standard-info">
+                        <div class="section-title">规范信息</div>
+                        <div class="section-content">
+                            <div class="form-item">
+                                <label>规范要求</label>
+                                <textarea id="defectStandard" rows="3" 
+                                    placeholder="引用相关规范要求">${defect?.standard || ''}</textarea>
+                            </div>
+                            <div class="form-item">
+                                <label>规范图示</label>
+                                <div class="image-upload-area" onclick="document.getElementById('standardImages').click()">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <p>点击或拖拽上传图片</p>
+                                </div>
+                                <input type="file" id="standardImages" hidden accept="image/*" multiple 
+                                    onchange="handleMultipleImageUpload(this, 'standardPreview')">
+                                <div id="standardPreview" class="image-preview">
+                                    ${defect?.standardImages?.map(img => `
+                                        <div class="image-preview-container">
+                                            <img src="${img}" alt="规范图示">
+                                            <button type="button" class="btn-text danger" onclick="removePreviewImage(this)">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    `).join('') || ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
             </div>
             <div class="modal-footer">
-                <button class="btn-text" onclick="closeModal()">取消</button>
-                ${!isView ? `
-                    <button class="btn-text" onclick="resetForm()">
-                        <i class="fas fa-undo"></i> 重置
-                    </button>
-                    <button class="btn-primary" onclick="${isAdd ? 'addDefect()' : `saveDefect('${defect?.id}')`}">
-                        <i class="fas fa-save"></i> ${isAdd ? '创建' : '保存'}
-                    </button>
-                ` : `
-                    <button class="btn-primary" onclick="editDefect('${defect.id}')">
-                        <i class="fas fa-edit"></i> 编辑
-                    </button>
-                `}
+                <button type="button" class="btn-text" onclick="closeModal()">取消</button>
+                <button type="submit" form="defectForm" class="btn-primary">保存</button>
             </div>
         </div>
     `;
-
-    // 4. 显示模态框
+    
     modal.style.display = 'block';
 }
-
 // 关闭模态框
 function closeModal() {
     const modal = document.getElementById('defectModal');
@@ -569,7 +573,7 @@ function handleSingleImageUpload(input, previewId) {
     reader.readAsDataURL(file);
 }
 
-// 修改表单验证函数
+// 修改表验证函数
 function validateForm(data) {
     const errors = [];
     
@@ -589,7 +593,7 @@ function validateForm(data) {
     return errors;
 }
 
-// 修改保存函数
+// 修改保存函数，确保保存到本地存储
 function saveDefect(id) {
     try {
         const defect = {
@@ -623,7 +627,7 @@ function saveDefect(id) {
             showToast('保存成功', 'success');
         }
 
-        saveToLocalStorage();
+        saveToLocalStorage(); // 保存更改
         renderDefects();
         closeModal();
     } catch (error) {
@@ -632,7 +636,7 @@ function saveDefect(id) {
     }
 }
 
-// 修改添加缺陷函数
+// 修改添加缺陷函数，确保保存到本地存储
 function addDefect() {
     debug('添加新缺陷', 'info');
     try {
@@ -663,10 +667,10 @@ function addDefect() {
         }
 
         state.defects.push(defect);
+        saveToLocalStorage(); // 保存更改
         debug(`新缺陷添加成功 - ID: ${newId}`, 'success');
         showToast('添加成功', 'success');
         
-        saveToLocalStorage();
         renderDefects();
         closeModal();
     } catch (error) {
@@ -710,7 +714,7 @@ function handleViewChange(e) {
     localStorage.setItem('preferred-view', size);
 }
 
-// 添加宽度调整功能
+// 添加度调整功能
 function initializeResizeHandle() {
     const handle = document.querySelector('.resize-handle');
     const filterPanel = document.querySelector('.filter-panel');
