@@ -363,8 +363,7 @@ function deleteDefect(id) {
 }
 
 // 显示新增/编辑缺陷模态框
-function showDefectModal(mode, id = null) {
-    const defect = id ? state.defects.find(d => d.id === id) : null;
+function showDefectModal(mode, defect = null) {
     const modal = document.getElementById('defectModal');
     
     modal.innerHTML = `
@@ -374,13 +373,19 @@ function showDefectModal(mode, id = null) {
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <form id="defectForm" onsubmit="handleDefectSubmit(event, '${mode}', '${id || ''}')">
+                <form id="defectForm" onsubmit="handleDefectSubmit(event, '${mode}', '${defect?.id || ''}')">
                     <div class="detail-section basic-info">
                         <div class="section-title">
                             <i class="fas fa-info-circle"></i>基础信息
                         </div>
                         <div class="section-content">
                             <div class="form-grid">
+                                <div class="form-item">
+                                    <label class="required-field">编号</label>
+                                    <input type="text" id="defectId" required 
+                                        value="${defect?.id || ''}" 
+                                        placeholder="请输入缺陷编号">
+                                </div>
                                 <div class="form-item">
                                     <label class="required-field">缺陷名称</label>
                                     <input type="text" id="defectTitle" required 
@@ -438,7 +443,7 @@ function showDefectModal(mode, id = null) {
                         <div class="section-content">
                             <div class="form-item">
                                 <label>缺陷描述</label>
-                                <textarea id="defectDescription" required rows="3" 
+                                <textarea id="defectDescription" rows="3" 
                                     placeholder="详细描述缺陷情况">${defect?.description || ''}</textarea>
                             </div>
                             <div class="form-item">
@@ -573,17 +578,17 @@ function handleSingleImageUpload(input, previewId) {
     reader.readAsDataURL(file);
 }
 
-// 修改表验证函数
+// 修改表验证函数，只验证基础信息
 function validateForm(data) {
     const errors = [];
     
     // 只验证必填的基础信息
-    if (!data.title) {
-        errors.push('缺陷名称不能为空');
+    if (!data.id) {
+        errors.push('编号不能为空');
     }
     
-    if (!data.description) {
-        errors.push('缺陷描述不能为空');
+    if (!data.title) {
+        errors.push('缺陷名称不能为空');
     }
     
     if (!data.tags.craft || !data.tags.location || !data.tags.position || !data.tags.risk) {
